@@ -6,12 +6,15 @@
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/dramcoremain",
+            "program": "${workspaceRoot}/build/dramsim3main",
             "args": ["-c", "./../configs/ddr4_8G_x8_config.ini", "-n", "100000", "--trace-cpu", "--trace-file", "./../sample_trace.txt"],
             "stopAtEntry": true,
             "cwd": "${workspaceRoot}/build",
             "environment": [],
-            "externalConsole": true,
+            "externalConsole": false,
+
+            "preLaunchTask": "make",
+
             "linux": {
                 "MIMode": "gdb",
                 "setupCommands": [
@@ -40,7 +43,7 @@
             "name": "C++ Attach",
             "type": "cppdbg",
             "request": "attach",
-            "program": "enter program name, for example ${workspaceRoot}/a.out",
+            "program": "${workspaceRoot}/build/dramcoremain",
             "processId": "${command.pickProcess}",
             "linux": {
                 "MIMode": "gdb",
