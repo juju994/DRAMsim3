@@ -5,6 +5,12 @@
 using namespace dramsim3;
 
 int main(int argc, const char **argv) {
+    
+    for (int i = 0; i < 5; i++)
+    {
+        std::cout << "hello world!" << std::endl;
+        // std::cout << "111" << std::endl;
+    }
     args::ArgumentParser parser(
         "DRAM Simulator.",
         "Examples: \n."
@@ -67,6 +73,9 @@ int main(int argc, const char **argv) {
     cpu->PrintStats();
 
     delete cpu;
+
+ 
+    
 
     return 0;
 }
