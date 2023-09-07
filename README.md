@@ -30,7 +30,11 @@ cd build
 cmake ..
 
 # Build dramsim3 library and executables
-make -j4
+make -j4    
+#  -j4仅仅是在执行make命令时指定不同的并行任务参数
+# 普通make就生成build/dramsim3main和libdramsim3.so
+# cmake .. -DTHERMAL=1 执行后再编译就会所生成一个build/thermalreplay
+# 注意：cmake配置DTHERMAL属性后需要重新: cmake .. -DTHERMAL=0 (不编译热模块部分)
 
 # Alternatively, build with thermal module enabled
 cmake .. -DTHERMAL=1
@@ -67,11 +71,11 @@ You can control the verbosity in the config file as well.
 
 ```bash
 # generate histograms from overall output
-python3 scripts/plot_stats dramsim3.json
+python3 scripts/plot_stats.py dramsim3.json
 
 # or
 # generate time series for a variety stats from epoch outputs
-python3 scripts/plot_stats dramsim3epoch.json
+python3 scripts/plot_stats.py dramsim3epoch.json
 ```
 
 Currently stats from all channels are squashed together for cleaner plotting.
@@ -101,21 +105,34 @@ Currently stats from all channels are squashed together for cleaner plotting.
 
 ├── src  
     bankstate.cc: Records and manages DRAM bank timings and states which is modeled as a state machine.
+                    记录和管理DRAM bank时序和状态，其由状态机建模
     channelstate.cc: Records and manages channel timings and states.
+                    记录和管理通道时序和状态
     command_queue.cc: Maintains per-bank or per-rank FIFO queueing structures, determine which commands in the queues can be issued in this cycle.
+                    维护每个bank或rank的FIFO队列结构，决定队列中的哪个命令用于此周期
     configuration.cc: Initiates, manages system and DRAM parameters, including protocol, DRAM timings, address mapping policy and power parameters.
-    controller.cc: Maintains the per-channel controller, which manages a queue of pending memory transactions and issues corresponding DRAM commands, 
-                   follows FR-FCFS policy.
-    cpu.cc: Implements 3 types of simple CPU: 
+                    初始化并管理系统和DRAM参数，包括协议，DRAM时序，地址映射策略和功耗管理
+    controller.cc: Maintains the per-channel controller, which manages a queue of pending memory transactions and issues corresponding DRAM commands, follows FR-FCFS policy.
+                    维护每个通道控制器，包括管理一个待处理的内存事物队列，并发出现有的DRAM指令，遵循FR-FCFS策略
+    cpu.cc: Implements 3 types of simple CPU: 实现了3中简单CPU
             1. Random, can handle random CPU requests at full speed, the entire parallelism of DRAM protocol can be exploited without limits from address mapping and scheduling pocilies. 
+            随机，可以全速处理CPU的随即请求，DRAM协议的整个并行性可以在没有地址映射和调度能力限制的情况下得以利用
             2. Stream, provides a streaming prototype that is able to provide enough buffer hits.
+            流，提供一个流协议，其能够提供一个足够缓冲区命中率
             3. Trace-based, consumes traces of workloads, feed the fetched transactions into the memory system.
+            基于跟踪，计算工作负载，将提取的时间反馈到内存系统中
     dram_system.cc:  Initiates JEDEC or ideal DRAM system, registers the supplied callback function to let the front end driver know that the request is finished. 
+                    初始化JEDEC或理想DRAM系统，注册提供的回调函数，让前端驱动程序知道请求已经完成
     hmc.cc: Implements HMC system and interface, HMC requests are translates to DRAM requests here and a crossbar interconnect between the high-speed links and the memory controllers is modeled.
+                    处理HMC系统和接口，HMC请求需要变换为DRAM请求，并对高速链路和内存控制器之间的crossbar进行建模
     main.cc: Handles the main program loop that reads in simulation arguments, DRAM configurations and tick cycle forward.
+            处理main循环，读取仿真参数，DRAM配置和滴答循环
     memory_system.cc: A wrapper of dram_system and hmc.
+                        dram_system和hmc的包装器
     refresh.cc: Raises refresh request based on per-rank refresh or per-bank refresh.
+                基于每rank或每bank发起刷新请求
     timing.cc: Initiate timing constraints.
+                初始化时序约束
 ```
 
 ## Experiments
@@ -155,4 +172,5 @@ other Verilog simulators may require a slightly different format.
 [5] Li, S., & Jacob, B. (2019, September). Statistical DRAM modeling. In Proceedings of the International Symposium on Memory Systems (pp. 521-530).
 
 [6] Li, S. (2019). Scalable and Accurate Memory System Simulation (Doctoral dissertation).
+
 
