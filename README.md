@@ -114,13 +114,13 @@ Currently stats from all channels are squashed together for cleaner plotting.
                     初始化并管理系统和DRAM参数，包括协议，DRAM时序，地址映射策略和功耗管理
     controller.cc: Maintains the per-channel controller, which manages a queue of pending memory transactions and issues corresponding DRAM commands, follows FR-FCFS policy.
                     维护每个通道控制器，包括管理一个待处理的内存事物队列，并发出现有的DRAM指令，遵循FR-FCFS策略
-    cpu.cc: Implements 3 types of simple CPU: 实现了3中简单CPU
+    cpu.cc: Implements 3 types of simple CPU: 实现了3种简单CPU
             1. Random, can handle random CPU requests at full speed, the entire parallelism of DRAM protocol can be exploited without limits from address mapping and scheduling pocilies. 
             随机，可以全速处理CPU的随即请求，DRAM协议的整个并行性可以在没有地址映射和调度能力限制的情况下得以利用
             2. Stream, provides a streaming prototype that is able to provide enough buffer hits.
             流，提供一个流协议，其能够提供一个足够缓冲区命中率
             3. Trace-based, consumes traces of workloads, feed the fetched transactions into the memory system.
-            基于跟踪，计算工作负载，将提取的时间反馈到内存系统中
+            基于跟踪，计算工作负载，将提取的事件反馈到内存系统中
     dram_system.cc:  Initiates JEDEC or ideal DRAM system, registers the supplied callback function to let the front end driver know that the request is finished. 
                     初始化JEDEC或理想DRAM系统，注册提供的回调函数，让前端驱动程序知道请求已经完成
     hmc.cc: Implements HMC system and interface, HMC requests are translates to DRAM requests here and a crossbar interconnect between the high-speed links and the memory controllers is modeled.
