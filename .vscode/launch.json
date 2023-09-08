@@ -7,7 +7,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/build/dramsim3main",
-            "args": ["-c", "./../configs/ddr4_8G_x8_config.ini", "-n", "100000", "--trace-cpu", "--trace-file", "./../sample_trace.txt"],
+            "args": ["./../configs/DDR4_8Gb_x8_3200.ini", "-c", "100000", "--stream", "random"],
             "stopAtEntry": true,
             "cwd": "${workspaceRoot}/build",
             "environment": [],
