@@ -1439,9 +1439,10 @@ namespace args
      *
      * Works like a regular flag, but throws an instance of Help when it is matched
      */
-    class HelpFlag : public Flag
+    class HelpFlag : public Flag    //表示继承自Flag类
     {
         public:
+            // 与类型名相同的就是构造函数
             HelpFlag(Group &group_, const std::string &name_, const std::string &help_, Matcher &&matcher_): Flag(group_, name_, help_, std::move(matcher_)) {}
 
             virtual ~HelpFlag() {}

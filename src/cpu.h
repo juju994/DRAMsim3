@@ -9,6 +9,8 @@
 
 namespace dramsim3 {
 
+// 实现了3种简单CPU
+
 class CPU {
    public:
     CPU(const std::string& config_file, const std::string& output_dir)
