@@ -7,8 +7,11 @@
 
 #include "INIReader.h"
 
+// 初始化并管理系统和DRAM参数，包括协议，DRAM时序，地址映射策略和功耗管理
+
 namespace dramsim3 {
 
+// DRAM协议
 enum class DRAMProtocol {
     DDR3,
     DDR4,
@@ -24,45 +27,64 @@ enum class DRAMProtocol {
     SIZE
 };
 
+// 刷新策略 RANK级同步/RANK级交错/BANK级交错
 enum class RefreshPolicy {
-    RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement
+    RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement (由于功耗太好不太现实)
     RANK_LEVEL_STAGGERED,
     BANK_LEVEL_STAGGERED,
     SIZE 
 };
 
+
 class Config {
    public:
-    Config(std::string config_file, std::string out_dir);
-    Address AddressMapping(uint64_t hex_addr) const;
-    // DRAM physical structure
-    DRAMProtocol protocol;
-    int channel_size;
-    int channels;
-    int ranks;
-    int banks;
-    int bankgroups;
-    int banks_per_group;
-    int rows;
-    int columns;
-    int device_width;
-    int bus_width;
-    int devices_per_rank;
-    int BL;
+    Config(std::string config_file, std::string out_dir);       // 构造函数
+    Address AddressMapping(uint64_t hex_addr) const;            // 地址映射
+    // DRAM physical structure DRAM物理层
+    DRAMProtocol protocol;              // 协议                       
+    int channel_size;                   // 通道大小(MB) 整个系统的channel尺寸(也可理解为总容量)
+    int channels;                       // 通道数量
+    int ranks;                          // rank的数量 = channel_size / 每rank容量(MB) 计算得到
+    int banks;                          // bank总数量 = bankgroups * banks_per_group 计算得到
+    int bankgroups;                     // bank组
+    int banks_per_group;                // 每组bank数量
+    int rows;                           // 行数
+    int columns;                        // 列数     为避免歧义, 配置文件中colums特指列的物理宽度
+    int device_width;                   // die位宽
+    int bus_width;                      // 总线宽度(即每个rank的数据位数)
+    int devices_per_rank;               // 每rank的die个数 = bus_width / device_width  计算得到
+    int BL;                             // 突发长度
 
-    // Address mapping numbers
-    int shift_bits;
-    int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;
-    uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;
+    // Address mapping numbers  地址映射参数
+    /*
+        地址映射区域    具体指代
+            ch        channels
+            ra        ranks
+            bg        bankgroups
+            ba        banks_per_group
+            ro        rows
+            co        actual_col_bits = 列位数 - 列地址低位的位数(受突发长度交错影响)
+        例如: DDR4_8Gb_x8_3200.ini配置文件中
+        具体指代                        field_widths
+        channels = 1                    
+        ranks = 2                       
+        bankgroups = 4                  
+        banks_per_group = 4
+        rows = 2^16
+        actual_col_bits = 7 (10-3)
+    */ 
+    int shift_bits;                                                         // 请求位数, 请求字节数 = 总线宽度/8*突发长度
+    int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;                     // 地址区域位置
+    uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;          // 地址区域掩码
 
-    // Generic DRAM timing parameters
+    // Generic DRAM timing parameters   DRAM时序参数
     double tCK;
-    int burst_cycle;  // seperate BL with timing since for GDDRx it's not BL/2
+    int burst_cycle;  // seperate BL with timing since for GDDRx it's not BL/2 GDDRx的burst_cycle时序参数不是BL/2
     int AL;
     int CL;
     int CWL;
-    int RL;
-    int WL;
+    int RL;             // RL = AL + CL
+    int WL;             // WL = AL + CWL
     int tCCD_L;
     int tCCD_S;
     int tRTRS;
@@ -89,8 +111,8 @@ class Config {
     int tFAW;
     int tRPRE;  // read preamble and write preamble are important
     int tWPRE;
-    int read_delay;
-    int write_delay;
+    int read_delay;     // 读延时(计算得到) read_delay = RL + burst_cycle
+    int write_delay;    // 写延时(计算得到) write_delay = WL + burst_cycle
 
     // LPDDR4 and GDDR5
     int tPPD;
@@ -99,7 +121,7 @@ class Config {
     int tRCDRD;
     int tRCDWR;
 
-    // pre calculated power parameters
+    // pre calculated power parameters  计算得到每个指令的功耗参数
     double act_energy_inc;
     double pre_energy_inc;
     double read_energy_inc;
@@ -113,7 +135,7 @@ class Config {
 
     // HMC
     int num_links;
-    int num_dies;
+    int num_dies;                               // die的数量
     int link_width;
     int link_speed;
     int num_vaults;
@@ -121,27 +143,27 @@ class Config {
     int xbar_queue_depth;
 
     // System
-    std::string address_mapping;
-    std::string queue_structure;
-    std::string row_buf_policy;
-    RefreshPolicy refresh_policy;
-    int cmd_queue_size;
-    bool unified_queue;
-    int trans_queue_size;
-    int write_buf_size;
-    bool enable_self_refresh;
-    int sref_threshold;
-    bool aggressive_precharging_enabled;
-    bool enable_hbm_dual_cmd;
+    std::string address_mapping;                // 地址映射(一定要12个字符)
+    std::string queue_structure;                // 队列结构        
+    std::string row_buf_policy;                 // 行缓存器策略
+    RefreshPolicy refresh_policy;               // 刷新策略
+    int cmd_queue_size;                         // 命令队列尺寸
+    bool unified_queue;                         // 统一队列？
+    int trans_queue_size;                       // ？队列尺寸
+    int write_buf_size;                         // 写buf尺寸
+    bool enable_self_refresh;                   // 使能自刷新
+    int sref_threshold;                         // 自刷新阈值？
+    bool aggressive_precharging_enabled;        // 严格预充电使能
+    bool enable_hbm_dual_cmd;                   // 是能HBM双指令？
 
 
-    int epoch_period;
-    int output_level;
-    std::string output_dir;
-    std::string output_prefix;
-    std::string json_stats_name;
-    std::string json_epoch_name;
-    std::string txt_stats_name;
+    int epoch_period;                           // epoch周期？
+    int output_level;                           // 输出级别
+    std::string output_dir;                     // 输出路径
+    std::string output_prefix;                  // 输出前缀
+    std::string json_stats_name;                // 
+    std::string json_epoch_name;                // 
+    std::string txt_stats_name;                 // 
 
     // Computed parameters
     int request_size_bytes;
@@ -155,7 +177,7 @@ class Config {
         return (protocol == DRAMProtocol::HBM ||
                 protocol == DRAMProtocol::HBM2);
     }
-    bool IsHMC() const { return (protocol == DRAMProtocol::HMC); }
+    bool IsHMC() const { return (protocol == DRAMProtocol::HMC); }  // 如果protocol和DRAMProtocol::HMC就是true(是HMC), 不相等就是false(不是HMC)
     // yzy: add another function
     bool IsDDR4() const { return (protocol == DRAMProtocol::DDR4); }
 
@@ -182,6 +204,7 @@ class Config {
     double bank_asr;  // the aspect ratio of a bank: #row_bits / #col_bits
 #endif  // THERMAL
 
+    // 私有参数!
    private:
     INIReader* reader_;
     void CalculateSize();

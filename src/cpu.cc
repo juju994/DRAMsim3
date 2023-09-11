@@ -3,9 +3,9 @@
 namespace dramsim3 {
 
 void RandomCPU::ClockTick() {
-    // Create random CPU requests at full speed
-    // this is useful to exploit the parallelism of a DRAM protocol
-    // and is also immune to address mapping and scheduling policies
+    // Create random CPU requests at full speed 
+    // this is useful to exploit the parallelism of a DRAM protocol     
+    // and is also immune to address mapping and scheduling policies  
     memory_system_.ClockTick();
     if (get_next_) {
         last_addr_ = gen();

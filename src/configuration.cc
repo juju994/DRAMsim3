@@ -6,10 +6,20 @@
 #include <math.h>
 #endif  // THERMAL
 
+// 初始化并管理系统和DRAM参数，包括协议，DRAM时序，地址映射策略和功耗管理
+
 namespace dramsim3 {
 
+/*
+    构造函数, 参数与.h声明一样, 但是使用了参数化列表
+    参数: 
+        std::string config_file     配置文件
+        std::string out_dir         输出路径
+    return: NULL
+*/
 Config::Config(std::string config_file, std::string out_dir)
     : output_dir(out_dir), reader_(new INIReader(config_file)) {
+    // 检查文件是否为空
     if (reader_->ParseError() < 0) {
         std::cerr << "Can't load config file - " << config_file << std::endl;
         AbruptExit(__FILE__, __LINE__);
@@ -17,13 +27,14 @@ Config::Config(std::string config_file, std::string out_dir)
 
     // The initialization of the parameters has to be strictly in this order
     // because of internal dependencies
-    InitSystemParams();
-    InitDRAMParams();
-    CalculateSize();
-    SetAddressMapping();
-    InitTimingParams();
-    InitPowerParams();
-    InitOtherParams();
+    // 因为内部依赖关系，要按以下顺序初始化
+    InitSystemParams();         // 系统级初始化
+    InitDRAMParams();           // DRAM器件级初始化
+    CalculateSize();            // 计算大小
+    SetAddressMapping();        // 系统级初始化
+    InitTimingParams();         // 系统级初始化
+    InitPowerParams();          // 系统级初始化
+    InitOtherParams();          // 系统级初始化
 #ifdef THERMAL
     InitThermalParams();
 #endif  // THERMAL
@@ -43,12 +54,12 @@ Address Config::AddressMapping(uint64_t hex_addr) const {
 
 void Config::CalculateSize() {
     // calculate rank and re-calculate channel_size
-    devices_per_rank = bus_width / device_width;
-    int page_size = columns * device_width / 8;  // page size in bytes
-    int megs_per_bank = page_size * (rows / 1024) / 1024;
-    int megs_per_rank = megs_per_bank * banks * devices_per_rank;
+    devices_per_rank = bus_width / device_width;    // 每个rank有多少die? = 总线宽度 / 器件位宽 例如: 64/6=8 die
+    int page_size = columns * device_width / 8;     // page size in bytes   页大小本质上就是每行的位数(Bytes) = 列数量 / 器件位宽 / 8
+    int megs_per_bank = page_size * (rows / 1024) / 1024;           // 每bank信息量(MB) = 每行位数(Bytes) * 行数 / 1024 /1024
+    int megs_per_rank = megs_per_bank * banks * devices_per_rank;   // 总rank信息量(MB) = 每bank信息量 * bank数量 * die的数量 (即每根内存条包含的信息量)
 
-    if (megs_per_rank > channel_size) {
+    if (megs_per_rank > channel_size) { 
         std::cout << "WARNING: Cannot create memory system of size "
                   << channel_size
                   << "MB with given device choice! Using default size "
@@ -79,6 +90,7 @@ DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     return protocol_pairs[protocol_str];
 }
 
+
 int Config::GetInteger(const std::string& sec, const std::string& opt,
                        int default_val) const {
     return static_cast<int>(reader_->GetInteger(sec, opt, default_val));
@@ -92,21 +104,24 @@ void Config::InitDRAMParams() {
     banks_per_group = GetInteger("dram_structure", "banks_per_group", 2);
     bool bankgroup_enable =
         reader.GetBoolean("dram_structure", "bankgroup_enable", true);
-    // GDDR5/6 can chose to enable/disable bankgroups
-    if (!bankgroup_enable) {  // aggregating all banks to one group
+    // GDDR5/6 can chose to enable/disable bankgroups   5/6可以选择开启或关闭bank组
+    if (!bankgroup_enable) {  // aggregating all banks to one group     相当于就是bank组为false，将所有的bank放到一个group
         banks_per_group *= bankgroups;
         bankgroups = 1;
     }
+
     banks = bankgroups * banks_per_group;
     rows = GetInteger("dram_structure", "rows", 1 << 16);
     columns = GetInteger("dram_structure", "columns", 1 << 10);
     device_width = GetInteger("dram_structure", "device_width", 8);
     BL = GetInteger("dram_structure", "BL", 8);
     num_dies = GetInteger("dram_structure", "num_dies", 1);
+
     // HBM specific parameters
     enable_hbm_dual_cmd =
         reader.GetBoolean("dram_structure", "hbm_dual_cmd", true);
-    enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this
+    enable_hbm_dual_cmd &= IsHBM();  // Make sure only HBM enables this  enable_hbm_dual_cmd是逻辑值
+
     // HMC specific parameters
     num_links = GetInteger("hmc", "num_links", 4);
     link_width = GetInteger("hmc", "link_width", 16);
@@ -119,9 +134,11 @@ void Config::InitDRAMParams() {
         // for 32B block size
         BL = block_size * 8 / device_width;
     }
+
     // set burst cycle according to protocol
     // We use burst_cycle for timing and use BL for capacity calculation
     // BL = 0 simulate perfect BW
+    // 根据协议设置突发周期, 我们使用burst_cycle计算时序, 使用BL计算容量. BL = 0 simulate perfect BW
     if (protocol == DRAMProtocol::GDDR5) {
         burst_cycle = (BL == 0) ? 0 : BL / 4;
         BL = (BL == 0) ? 8 : BL;
@@ -132,21 +149,26 @@ void Config::InitDRAMParams() {
         burst_cycle = (BL == 0) ? 0 : BL / 16;
         BL = (BL == 0 ) ? 8 : BL;
     } else {
-        burst_cycle = (BL == 0) ? 0 : BL / 2;
-        BL = (BL == 0) ? (IsHBM() ? 4 : 8) : BL;
+        // GDDR5 GDDR5X GDDR6之外的类型
+        // 根据BL决定突发循环(时序参数)
+        burst_cycle = (BL == 0) ? 0 : BL / 2;       // 如果BL为0, 则突发长度为0; 如果BL不为0, 则burst_cycle为BL/2
+        // 再次检查BL取值
+        BL = (BL == 0) ? (IsHBM() ? 4 : 8) : BL;    // 如果BL为0, 则如果又是HBM, 则BL为4, 否则BL为8; 如果BL不为0, BL保持原值 
     }
-    // every protocol has a different definition of "column",
-    // in DDR3/4, each column is exactly device_width bits,
-    // but in GDDR5, a column is device_width * BL bits
-    // and for HBM each column is device_width * 2 (prefetch)
-    // as a result, different protocol has different method of calculating
+    // every protocol has a different definition of "column",   每个协议对列的定义都不相同
+    // in DDR3/4, each column is exactly device_width bits,     在DDR3/4中每一列严格对应器件宽度位数
+    // but in GDDR5, a column is device_width * BL bits         在GDDR5中, 每一列 = device_width * BL bits?
+    // and for HBM each column is device_width * 2 (prefetch)   在HBM中, 每一列 = device_width * 2(预取)
+    // as a result, different protocol has different method of calculating  因此, 不同的协议在计算页大小和地址映射时有不同的方法
     // page size, and address mapping...
-    // To make life easier, we regulate the use of the term "column"
+    // To make life easier, we regulate the use of the term "column"    为了统一命名, 我们通常仅仅认为column一词对应物理列的数量(器件位宽)
     // to only represent physical column (device width)
+
+    // columns需要对GDDR和HBM情况特殊处理
     if (IsGDDR()) {
-        columns *= BL;
+        columns *= BL;      // GDDR情况
     } else if (IsHBM()) {
-        columns *= 2;
+        columns *= 2;       // HBM情况
     }
     return;
 }
@@ -216,31 +238,34 @@ void Config::InitPowerParams() {
 
 void Config::InitSystemParams() {
     const auto& reader = *reader_;
-    channel_size = GetInteger("system", "channel_size", 1024);
-    channels = GetInteger("system", "channels", 1);
-    bus_width = GetInteger("system", "bus_width", 64);
-    address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");
-    queue_structure = reader.Get("system", "queue_structure", "PER_BANK");
-    row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");
-    cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);
-    trans_queue_size = GetInteger("system", "trans_queue_size", 32);
-    unified_queue = reader.GetBoolean("system", "unified_queue", false);
-    write_buf_size = GetInteger("system", "write_buf_size", 16);
+    channel_size = GetInteger("system", "channel_size", 1024);                      // 16384(2^14)
+    channels = GetInteger("system", "channels", 1);                                 // 1
+    bus_width = GetInteger("system", "bus_width", 64);                              // 64
+    address_mapping = reader.Get("system", "address_mapping", "chrobabgraco");      // rochrababgco
+    queue_structure = reader.Get("system", "queue_structure", "PER_BANK");          // PER_BANK
+    row_buf_policy = reader.Get("system", "row_buf_policy", "OPEN_PAGE");           // OPEN_PAGE
+    cmd_queue_size = GetInteger("system", "cmd_queue_size", 16);                    // 8
+    trans_queue_size = GetInteger("system", "trans_queue_size", 32);                // 32
+    unified_queue = reader.GetBoolean("system", "unified_queue", false);            // NULL
+    write_buf_size = GetInteger("system", "write_buf_size", 16);                    // NULL
+    // 检查刷新策略
     std::string ref_policy =
-        reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED");
-    if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {
+        reader.Get("system", "refresh_policy", "RANK_LEVEL_STAGGERED"); // 默认RANK级同步
+    if (ref_policy == "RANK_LEVEL_SIMULTANEOUS") {                      // RANK级同步
         refresh_policy = RefreshPolicy::RANK_LEVEL_SIMULTANEOUS;
-    } else if (ref_policy == "RANK_LEVEL_STAGGERED") {
+    } else if (ref_policy == "RANK_LEVEL_STAGGERED") {                  // RANK级交错
         refresh_policy = RefreshPolicy::RANK_LEVEL_STAGGERED;
-    } else if (ref_policy == "BANK_LEVEL_STAGGERED") {
+    } else if (ref_policy == "BANK_LEVEL_STAGGERED") {                  // BANK级
         refresh_policy = RefreshPolicy::BANK_LEVEL_STAGGERED;
     } else {
         AbruptExit(__FILE__, __LINE__);
     }
 
+    /*-----自刷新相关-----*/
     enable_self_refresh =
-        reader.GetBoolean("system", "enable_self_refresh", false);
-    sref_threshold = GetInteger("system", "sref_threshold", 1000);
+        reader.GetBoolean("system", "enable_self_refresh", false);      // 自刷新默认关
+    sref_threshold = GetInteger("system", "sref_threshold", 1000);      // 自刷新阈值
+    // 预充电使能
     aggressive_precharging_enabled =
         reader.GetBoolean("system", "aggressive_precharging_enabled", false);
 
@@ -347,13 +372,16 @@ void Config::InitTimingParams() {
 void Config::SetAddressMapping() {
     // memory addresses are byte addressable, but each request comes with
     // multiple bytes because of bus width, and burst length
-    request_size_bytes = bus_width / 8 * BL;
-    shift_bits = LogBase2(request_size_bytes);
-    int col_low_bits = LogBase2(BL);
-    int actual_col_bits = LogBase2(columns) - col_low_bits;
+    // 内存地址为字节编址, 但是由于总线宽度和突发长度的原因, 每个请求都带有多个字节
+    request_size_bytes = bus_width / 8 * BL;        // 字节
+    shift_bits = LogBase2(request_size_bytes);      // 请求位数
+    int col_low_bits = LogBase2(BL);                // 列地址低位的位数(由突发长度控制, 低位交错编址)
+    int actual_col_bits = LogBase2(columns) - col_low_bits; // 实际列位数 = 列位数 - 列地址低位的位数
 
     // has to strictly follow the order of chan, rank, bg, bank, row, col
-    std::map<std::string, int> field_widths;
+    // 严格遵守通道/rank/bankgroup/bank/row/col的顺序
+    // map关联容器, 按照键的顺序对键和值进行排序, 并允许通过键来快速查找值
+    std::map<std::string, int> field_widths;    // 地址映射区域宽度(bit位数)
     field_widths["ch"] = LogBase2(channels);
     field_widths["ra"] = LogBase2(ranks);
     field_widths["bg"] = LogBase2(bankgroups);
@@ -361,26 +389,33 @@ void Config::SetAddressMapping() {
     field_widths["ro"] = LogBase2(rows);
     field_widths["co"] = actual_col_bits;
 
+    // 检查输入参数
     if (address_mapping.size() != 12) {
         std::cerr << "Unknown address mapping (6 fields each 2 chars required)"
                   << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
 
-    // // get address mapping position fields from config
-    // // each field must be 2 chars
-    std::vector<std::string> fields;
+    // get address mapping position fields from config
+    // each field must be 2 chars
+    // 从设置中获得地址映射位置区域, 每个区域必须是2个字符, 下面代码就是区域分割用, 每2个字符为一个区域
+    std::vector<std::string> fields;    // 输入地址映射区域顺序
     for (size_t i = 0; i < address_mapping.size(); i += 2) {
         std::string token = address_mapping.substr(i, 2);
-        fields.push_back(token);
+        fields.push_back(token);    // 将token元素放入容器末尾
     }
 
+    /*
+        下面这段从fields(配置文件设置的address_mapping)的最后面按顺序读入地址映射区域代码, 
+        pos记录了对应区域开始的宽度数(位数), 把pos变量和对应键值写入field_pos
+    */ 
     std::map<std::string, int> field_pos;
     int pos = 0;
-    while (!fields.empty()) {
-        auto token = fields.back();
-        fields.pop_back();
-        if (field_widths.find(token) == field_widths.end()) {
+    while (!fields.empty()) {   // 判断fields不为空就一直while循环
+        auto token = fields.back();     // 获取fields中最后一个元素
+        fields.pop_back();      // 弹出容器fields中最后一个元素
+        if (field_widths.find(token) == field_widths.end()) {   // 在field_widths中找到fields中的最后一个元素, 并且还要位于最后位置!
+            // std::cout << field_widths << std::endl;
             std::cerr << "Unrecognized field: " << token << std::endl;
             AbruptExit(__FILE__, __LINE__);
         }
