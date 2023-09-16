@@ -31,8 +31,8 @@ Config::Config(std::string config_file, std::string out_dir)
     InitSystemParams();         // 系统级初始化
     InitDRAMParams();           // DRAM器件级初始化
     CalculateSize();            // 计算大小
-    SetAddressMapping();        // 系统级初始化
-    InitTimingParams();         // 系统级初始化
+    SetAddressMapping();        // 设置地址映射初始化
+    InitTimingParams();         // 时序参数初始化
     InitPowerParams();          // 系统级初始化
     InitOtherParams();          // 系统级初始化
 #ifdef THERMAL
@@ -41,8 +41,18 @@ Config::Config(std::string config_file, std::string out_dir)
     delete (reader_);
 }
 
+/*
+    地址映射函数
+    输入参数: 
+            uint64_t hex_addr     16进制逻辑地址值
+    return: 
+            返回一个Address结构体变量地址(调用构造函数)
+    Notes: 从给定逻辑地址中解析出实际硬件地址. 返回值co为actual_col_bits, 去掉了突发长度的位数
+*/
 Address Config::AddressMapping(uint64_t hex_addr) const {
+    // 地址移位, 右移就是忽略一部分输入地址(因为给一个地址会返回bus_size位数据, 而且有突发长度, 这样的话在DRAM内部编址是就要跳过这些)
     hex_addr >>= shift_bits;
+    // 地址映射时, 输入地址全部右移
     int channel = (hex_addr >> ch_pos) & ch_mask;
     int rank = (hex_addr >> ra_pos) & ra_mask;
     int bg = (hex_addr >> bg_pos) & bg_mask;
@@ -73,6 +83,13 @@ void Config::CalculateSize() {
     return;
 }
 
+/*
+    获得DRAM协议字段
+    输入参数: 
+            std::string protocol_str     协议字符串
+    return: 
+            根觉输入参数匹配函数内字符串与枚举变量键值对, 返回一个DRAMProtocol枚举变量
+*/
 DRAMProtocol Config::GetDRAMProtocol(std::string protocol_str) {
     std::map<std::string, DRAMProtocol> protocol_pairs = {
         {"DDR3", DRAMProtocol::DDR3},     {"DDR4", DRAMProtocol::DDR4},
@@ -159,8 +176,8 @@ void Config::InitDRAMParams() {
     // in DDR3/4, each column is exactly device_width bits,     在DDR3/4中每一列严格对应器件宽度位数
     // but in GDDR5, a column is device_width * BL bits         在GDDR5中, 每一列 = device_width * BL bits?
     // and for HBM each column is device_width * 2 (prefetch)   在HBM中, 每一列 = device_width * 2(预取)
-    // as a result, different protocol has different method of calculating  因此, 不同的协议在计算页大小和地址映射时有不同的方法
-    // page size, and address mapping...
+    // as a result, different protocol has different method of calculating page size, and address mapping...
+    // 因此, 不同的协议在计算页大小和地址映射时有不同的方法
     // To make life easier, we regulate the use of the term "column"    为了统一命名, 我们通常仅仅认为column一词对应物理列的数量(器件位宽)
     // to only represent physical column (device width)
 
@@ -221,12 +238,18 @@ void Config::InitPowerParams() {
     // time(in cycles) units are V * mA * Cycles and if we convert cycles to ns
     // then it's exactly pJ in energy and because a command take effects on all
     // devices per rank, also multiply that number
+    /* 每命令/cycle的能量增量, 由电压*电流*时间(cycles单位). 因为一个命令在一个rank的所有die上都有效, 因此需要倍乘他们的数量*/
     double devices = static_cast<double>(devices_per_rank);
+    // ACT bank激活
     act_energy_inc =
         VDD * (IDD0 * tRC - (IDD3N * tRAS + IDD2N * tRP)) * devices;
+    // 
     read_energy_inc = VDD * (IDD4R - IDD3N) * burst_cycle * devices;
+    // 
     write_energy_inc = VDD * (IDD4W - IDD3N) * burst_cycle * devices;
+    // 
     ref_energy_inc = VDD * (IDD5AB - IDD3N) * tRFC * devices;
+    // 
     refb_energy_inc = VDD * (IDD5PB - IDD3N) * tRFCb * devices;
     // the following are added per cycle
     act_stb_energy_inc = VDD * IDD3N * devices;
@@ -321,6 +344,7 @@ void Config::InitTimingParams() {
     // Timing Parameters
     // TODO there is no need to keep all of these variables, they should
     // just be temporary, ultimately we only need cmd to cmd Timing
+    
     const auto& reader = *reader_;
     tCK = reader.GetReal("timing", "tCK", 1.0);
     AL = GetInteger("timing", "AL", 0);
@@ -423,6 +447,7 @@ void Config::SetAddressMapping() {
         pos += field_widths[token];
     }
 
+    // 区域开始位数
     ch_pos = field_pos.at("ch");
     ra_pos = field_pos.at("ra");
     bg_pos = field_pos.at("bg");
@@ -430,6 +455,7 @@ void Config::SetAddressMapping() {
     ro_pos = field_pos.at("ro");
     co_pos = field_pos.at("co");
 
+    // 根据域宽度生成掩码, 就是1移位之后再减1
     ch_mask = (1 << field_widths.at("ch")) - 1;
     ra_mask = (1 << field_widths.at("ra")) - 1;
     bg_mask = (1 << field_widths.at("bg")) - 1;

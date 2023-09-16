@@ -6,10 +6,12 @@
 #include <vector>
 
 namespace dramsim3 {
-
+ 
 struct Address {
+    // 默认构造函数
     Address()
         : channel(-1), rank(-1), bankgroup(-1), bank(-1), row(-1), column(-1) {}
+    // 参数列表构造
     Address(int channel, int rank, int bankgroup, int bank, int row, int column)
         : channel(channel),
           rank(rank),
@@ -17,6 +19,7 @@ struct Address {
           bank(bank),
           row(row),
           column(column) {}
+    // 结构体地址构造
     Address(const Address& addr)
         : channel(addr.channel),
           rank(addr.rank),

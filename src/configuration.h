@@ -64,62 +64,64 @@ class Config {
             ba        banks_per_group
             ro        rows
             co        actual_col_bits = 列位数 - 列地址低位的位数(受突发长度交错影响)
-        例如: DDR4_8Gb_x8_3200.ini配置文件中
-        具体指代                        field_widths
-        channels = 1                    
-        ranks = 2                       
-        bankgroups = 4                  
-        banks_per_group = 4
-        rows = 2^16
-        actual_col_bits = 7 (10-3)
+
+        例如: DDR4_8Gb_x8_3200.ini配置文件中    rochrababgco
+        地址映射区域    具体指代                      field_widths    field_pos             掩码
+            ro      rows = 65536 = 2^16                16        ro_pos = 12(6)     ro_mask = 0000 1111 1111 1111 1111
+            ch      channels = 1                        0        ch_pos = 12(5)     ch_mask = 0000 0000 0000 0000 0000
+            ra      ranks = 2                           1        ra_pos = 11(4)     ra_mask = 0000 0000 0000 0000 0001
+            ba      banks_per_group = 4                 2        ba_pos = 9(3)      ba_mask = 0000 0000 0000 0000 0011
+            bg      bankgroups = 4                      2        bg_pos = 7(2)      bg_mask = 0000 0000 0000 0000 0011
+            co      actual_col_bits = 7 (10-3)          7        co_pos = 0(1)      co_mask = 0000 0000 0000 0111 1111
+                                                    一共28位, 加上3位突发就是31位地址
+            最后减掉的3位对应每rank里面的die数量(8个, 突发长度=8)
     */ 
     int shift_bits;                                                         // 请求位数, 请求字节数 = 总线宽度/8*突发长度
-    int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;                     // 地址区域位置
+    int ch_pos, ra_pos, bg_pos, ba_pos, ro_pos, co_pos;                     // 地址区域位置(即区域开始的位数)
     uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;          // 地址区域掩码
 
     // Generic DRAM timing parameters   DRAM时序参数
-    double tCK;
-    int burst_cycle;  // seperate BL with timing since for GDDRx it's not BL/2 GDDRx的burst_cycle时序参数不是BL/2
-    int AL;
-    int CL;
-    int CWL;
-    int RL;             // RL = AL + CL
-    int WL;             // WL = AL + CWL
-    int tCCD_L;
-    int tCCD_S;
-    int tRTRS;
-    int tRTP;
-    int tWTR_L;
-    int tWTR_S;
-    int tWR;
-    int tRP;
-    int tRRD_L;
-    int tRRD_S;
-    int tRAS;
-    int tRCD;
-    int tRFC;
-    int tRC;
-    // tCKSRE and tCKSRX are only useful for changing clock freq after entering
-    // SRE mode we are not doing that, so tCKESR is sufficient
-    int tCKE;
-    int tCKESR;
-    int tXS;
-    int tXP;
-    int tRFCb;
-    int tREFI;
-    int tREFIb;
-    int tFAW;
-    int tRPRE;  // read preamble and write preamble are important
-    int tWPRE;
+    double tCK;         // Minimum Clock Cycle Time(DLL off mode)   最小时钟周期    default: 0.63
+    int burst_cycle;    // seperate BL with timing since for GDDRx it's not BL/2 GDDRx的burst_cycle时序参数不是BL/2
+    int AL;             // CAS Additive Latency 附加延时     default: 0
+    int CL;             // CAS(column address select Latency)延迟 地址读命令信号激活后到第一位数据输出的潜伏周期    default: 22
+    int CWL;            // CAS Write Latency    CAS写命令信号激活后到第一位数据输入的潜伏周期   default: 16
+    int RL;             // RL = AL + CL     必须>tRCD   default: 22
+    int WL;             // WL = AL + CWL        default: 16
+    int tCCD_L;         // CAS_n-to-CAS_n delay (long) 适用于同一bank组之间的连续CAS_n(读到读或者写到写都有)         P91    default: 8
+    int tCCD_S;         // CAS_n-to-CAS_n delay (short) 适用于不同bank组之间的连续CAS_n时间(读到读或者写到写都有)     P91    default: 4
+    int tRTRS;          // ???? default: 1
+    int tRTP;           // Internal READ Command to PRECHARGE Command delay default: 12
+    int tWTR_L;         // 从内部写入事件后到内部读事件的延迟时间(同一bank组)   P93     default: 12
+    int tWTR_S;         // 从内部写入事件后到内部读事件的延迟时间(不同bank组)   P93     default: 4
+    int tWR;            // Write Recovery   写恢复时间      default: 24
+    int tRP;            // RAS Precharge Time   行预充电时间(由于行的独占性, 任何一个命令完成后, 要重新对bank寻址完成命令激活)    default: 22
+    int tRRD_L;         // row to row ACTIVATE to ACTIVATE Command period (long)  适用于同一bank组但不同bank的连续CAS     P92    default: 8
+    int tRRD_S;         // row to row ACTIVATE to ACTIVATE Command period (short)  适用于不同bank组的连续CAS             P92    default: 4
+    int tRAS;           // minimum ACT to PRE timing    default: 52
+    int tRCD;           // RAS-to-CAS Delay 行寻址至列寻址延迟时间,这个延时是为了满足命令激活到读/写命令的切换  default: 22
+    int tRFC;           // REFRESH命令和下一个有效命令(也可以是下一个REFRESH)之间的延迟    default: 560
+    int tRC;            // ACT to ACT or REF command period     default: NULL
+    // tCKSRE and tCKSRX are only useful for changing clock freq after entering SRE mode we are not doing that, so tCKESR is sufficient
+    int tCKE;           // CKE minimum pulse width      default: 8
+    int tCKESR;         // Minimum CKE low width for Self refresh entry to exit timing保持自刷新模式的最短时间 default: 9
+    int tXS;            // Exit Self Refresh to commands not requiring a locked DLL     default: 576
+    int tXP;            // 退出掉电模式直到DLL打开到人以有效命令; 推出预充电掉电,DLL冻结为不需要锁定DLL的命令      default: 10
+    int tRFCb;          // default: NULL
+    int tREFI;          // REFRESH命令的平均间隔    default: 12480
+    int tREFIb;         // default: NULL
+    int tFAW;           // Four activate window 4个激活窗口的间隔(一个tFAW里面只能有4个ACT命令) = 4*tRRD  P93 default: 34
+    int tRPRE;          // read preamble are important (读前延时)   default: 1
+    int tWPRE;          // write preamble are important (写前延时)      default: 1
     int read_delay;     // 读延时(计算得到) read_delay = RL + burst_cycle
     int write_delay;    // 写延时(计算得到) write_delay = WL + burst_cycle
 
     // LPDDR4 and GDDR5
-    int tPPD;
+    int tPPD;           // 
     // GDDR5
-    int t32AW;
-    int tRCDRD;
-    int tRCDWR;
+    int t32AW;          // 
+    int tRCDRD;         // 
+    int tRCDWR;         // 
 
     // pre calculated power parameters  计算得到每个指令的功耗参数
     double act_energy_inc;
