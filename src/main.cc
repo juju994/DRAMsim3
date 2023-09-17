@@ -12,6 +12,11 @@ int main(int argc, const char **argv) {
         std::cout << "argc num: " << i << ". " << argv[i] << std::endl;
     }
 
+    for (int i = 0; i < argc; i++)
+    {
+        std::cout << "hello" << std::endl;
+    }
+
     /*
         "--" can be used to terminate flag options and force all following arguments to be treated as positional options
 
