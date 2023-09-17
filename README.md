@@ -38,7 +38,9 @@ make -j4
 
 # Alternatively, build with thermal module enabled
 cmake .. -DTHERMAL=1
-
+# 加入热模块编译如果报没有superlu库的错误, 初始化子模块git仓库, 编译SuperLU库文件
+# git submodule update --init
+# cd ext/SuperLU_MT_3.1 && make lib
 ```
 
 The build process creates `dramsim3main` and executables in the `build` directory.
