@@ -135,6 +135,7 @@ Currently stats from all channels are squashed together for cleaner plotting.
                 基于每rank或每bank发起刷新请求
     timing.cc: Initiate timing constraints.
                 初始化时序约束
+    simple_stats: 对仿真结果进行简单统计
 ```
 
 ## Experiments
