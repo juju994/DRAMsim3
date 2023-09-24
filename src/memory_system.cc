@@ -1,6 +1,7 @@
 #include "memory_system.h"
 
 namespace dramsim3 {
+    
 MemorySystem::MemorySystem(const std::string &config_file,
                            const std::string &output_dir,
                            std::function<void(uint64_t)> read_callback,
@@ -55,6 +56,15 @@ bool MemorySystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     return dram_system_->AddTransaction(hex_addr, is_write);
 }
 
+/*
+    获得一个MemorySystem实例, 与MemorySystem类的构造函数定义相同
+    参数: 
+        std::string config_file     配置文件
+        std::string out_dir         输出路径
+        std::function<void(uint64_t)> read_callback     注册读回调函数
+        std::function<void(uint64_t)> write_callback    注册写回调函数
+    return: MemorySystem实例地址
+*/
 MemorySystem* GetMemorySystem(const std::string &config_file, const std::string &output_dir,
                  std::function<void(uint64_t)> read_callback,
                  std::function<void(uint64_t)> write_callback) {

@@ -11,13 +11,13 @@ Controller::Controller(int channel, const Config &config, const Timing &timing,
 #else
 Controller::Controller(int channel, const Config &config, const Timing &timing)
 #endif  // THERMAL
-    : channel_id_(channel),
+    : channel_id_(channel),     // 从0开始
       clk_(0),
       config_(config),
       simple_stats_(config_, channel_id_),
-      channel_state_(config, timing),
-      cmd_queue_(channel_id_, config, channel_state_, simple_stats_),
-      refresh_(config, channel_state_),
+      channel_state_(config, timing),   // config不用config_?
+      cmd_queue_(channel_id_, config, channel_state_, simple_stats_),   // config不用config_?
+      refresh_(config, channel_state_), // config不用config_?
 #ifdef THERMAL
       thermal_calc_(thermal_calc),
 #endif  // THERMAL

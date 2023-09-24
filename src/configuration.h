@@ -81,38 +81,40 @@ class Config {
     uint64_t ch_mask, ra_mask, bg_mask, ba_mask, ro_mask, co_mask;          // 地址区域掩码
 
     // Generic DRAM timing parameters   DRAM时序参数
-    double tCK;         // Minimum Clock Cycle Time(DLL off mode)   最小时钟周期    default: 0.63
+    double tCK;         // Minimum Clock Cycle Time(DLL off mode)   最小时钟周期, 内存频率周期为时钟周期的两倍    default: 0.63 
     int burst_cycle;    // seperate BL with timing since for GDDRx it's not BL/2 GDDRx的burst_cycle时序参数不是BL/2
     int AL;             // CAS Additive Latency 附加延时     default: 0
-    int CL;             // CAS(column address select Latency)延迟 地址读命令信号激活后到第一位数据输出的潜伏周期    default: 22
-    int CWL;            // CAS Write Latency    CAS写命令信号激活后到第一位数据输入的潜伏周期   default: 16
-    int RL;             // RL = AL + CL     必须>tRCD   default: 22
+    int CL;             // CAS(column address select Latency)延迟 地址读命令信号激活后到第一位数据输出的等待周期    default: 22
+    int CWL;            // CAS Write Latency    CAS写命令信号激活后到第一位数据输入的等待周期   default: 16
+    int RL;             // RL = AL + CL     ??必须>tRCD??   default: 22
     int WL;             // WL = AL + CWL        default: 16
-    int tCCD_L;         // CAS_n-to-CAS_n delay (long) 适用于同一bank组之间的连续CAS_n(读到读或者写到写都有)         P91    default: 8
-    int tCCD_S;         // CAS_n-to-CAS_n delay (short) 适用于不同bank组之间的连续CAS_n时间(读到读或者写到写都有)     P91    default: 4
-    int tRTRS;          // ???? default: 1
-    int tRTP;           // Internal READ Command to PRECHARGE Command delay default: 12
-    int tWTR_L;         // 从内部写入事件后到内部读事件的延迟时间(同一bank组)   P93     default: 12
-    int tWTR_S;         // 从内部写入事件后到内部读事件的延迟时间(不同bank组)   P93     default: 4
-    int tWR;            // Write Recovery   写恢复时间      default: 24
-    int tRP;            // RAS Precharge Time   行预充电时间(由于行的独占性, 任何一个命令完成后, 要重新对bank寻址完成命令激活)    default: 22
-    int tRRD_L;         // row to row ACTIVATE to ACTIVATE Command period (long)  适用于同一bank组但不同bank的连续CAS     P92    default: 8
-    int tRRD_S;         // row to row ACTIVATE to ACTIVATE Command period (short)  适用于不同bank组的连续CAS             P92    default: 4
+    int tCCD_L;         // CAS_n-to-CAS_n delay (long) (列选通到列选通间隔)适用于同一 bank组 之间的连续CAS_n(读到读或者写到写都有)         P91    default: 8
+    int tCCD_S;         // CAS_n-to-CAS_n delay (short) (列选通到列选通间隔)适用于不同 bank组 之间的连续CAS_n时间(读到读或者写到写都有)     P91    default: 4
+    int tRTRS;          // 读到读或写命令附加延时, 需要满足数据线突发输出时序和数据选通前导码的时序要求      ???? default: 1
+    int tRTP;           // 读到预充电间隔   Internal READ Command to PRECHARGE Command delay default: 12
+    int tWTR_L;         // 写命令到读命令的间隔(同一bank组)   P93     default: 12
+    int tWTR_S;         // 写命令到读命令的间隔(不同bank组)   P93     default: 4
+    int tWR;            // Write Recovery   写恢复时间, 从写入数据的最后一位开始算之后下个命令的间隔时间      default: 24
+    int tRP;            // RAS Precharge Time   行预充电时间(使用precharge关闭一行后需要等待tRP才能寻址另一行)    default: 22
+    int tRRD_L;         // (行激活间隔)row to row ACTIVATE to ACTIVATE Command period (long)  适用于 同一bank组但不同bank 的连续RAS     P92    default: 8
+    int tRRD_S;         // (行激活间隔)row to row ACTIVATE to ACTIVATE Command period (short)  适用于 不同bank组 的连续RAS             P92    default: 4
     int tRAS;           // minimum ACT to PRE timing    default: 52
     int tRCD;           // RAS-to-CAS Delay 行寻址至列寻址延迟时间,这个延时是为了满足命令激活到读/写命令的切换  default: 22
-    int tRFC;           // REFRESH命令和下一个有效命令(也可以是下一个REFRESH)之间的延迟    default: 560
-    int tRC;            // ACT to ACT or REF command period     default: NULL
+    int tRFC;           // REFRESH命令和下一个有效命令(也可以是下一个REFRESH)之间的延迟    default: 560     构造初始: 74
+    int tRC;            // ACT to ACT or REF command period tRC = tRAS + tRP    default: NULL
     // tCKSRE and tCKSRX are only useful for changing clock freq after entering SRE mode we are not doing that, so tCKESR is sufficient
-    int tCKE;           // CKE minimum pulse width      default: 8
     int tCKESR;         // Minimum CKE low width for Self refresh entry to exit timing保持自刷新模式的最短时间 default: 9
     int tXS;            // Exit Self Refresh to commands not requiring a locked DLL     default: 576
-    int tXP;            // 退出掉电模式直到DLL打开到人以有效命令; 推出预充电掉电,DLL冻结为不需要锁定DLL的命令      default: 10
-    int tRFCb;          // default: NULL
-    int tREFI;          // REFRESH命令的平均间隔    default: 12480
-    int tREFIb;         // default: NULL
+    
+    int tCKE;           // CKE minimum pulse width      default: 8  P162
+    int tXP;            // DLL打开情况下, 退出掉电模式到下一个有效命令      default: 10 P162
+    
+    int tRFCb;          // default: NULL 构造初始: 20
+    int tREFI;          // REFRESH命令的平均间隔    default: 12480  构造初始: 7800
+    int tREFIb;         // default: NULL 构造初始: 1950
     int tFAW;           // Four activate window 4个激活窗口的间隔(一个tFAW里面只能有4个ACT命令) = 4*tRRD  P93 default: 34
-    int tRPRE;          // read preamble are important (读前延时)   default: 1
-    int tWPRE;          // write preamble are important (写前延时)      default: 1
+    int tRPRE;          // read preamble are important (读前延时 前导码)   default: 1
+    int tWPRE;          // write preamble are important (写前延时 前导码)      default: 1
     int read_delay;     // 读延时(计算得到) read_delay = RL + burst_cycle
     int write_delay;    // 写延时(计算得到) write_delay = WL + burst_cycle
 
@@ -159,13 +161,13 @@ class Config {
     bool enable_hbm_dual_cmd;                   // 是能HBM双指令？
 
 
-    int epoch_period;                           // epoch周期？
+    int epoch_period;                           // epoch周期
     int output_level;                           // 输出级别
-    std::string output_dir;                     // 输出路径
-    std::string output_prefix;                  // 输出前缀
-    std::string json_stats_name;                // 
-    std::string json_epoch_name;                // 
-    std::string txt_stats_name;                 // 
+    std::string output_dir;                     // 输出路径, 默认输出到根目录
+    std::string output_prefix;                  // 输出前缀,可配置
+    std::string json_stats_name;                // output_prefix.json   
+    std::string json_epoch_name;                // output_prefixepoch.json   
+    std::string txt_stats_name;                 // output_prefix.txt   
 
     // Computed parameters
     int request_size_bytes;
@@ -208,7 +210,7 @@ class Config {
 
     // 私有参数!
    private:
-    INIReader* reader_;
+    INIReader* reader_;     //.INI文件解析器
     void CalculateSize();
     DRAMProtocol GetDRAMProtocol(std::string protocol_str);
     int GetInteger(const std::string& sec, const std::string& opt,

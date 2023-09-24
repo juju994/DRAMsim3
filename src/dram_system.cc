@@ -4,8 +4,8 @@
 
 namespace dramsim3 {
 
-// alternative way is to assign the id in constructor but this is less
-// destructive
+// alternative way is to assign the id in constructor but this is less destructive
+/**/
 int BaseDRAMSystem::total_channels_ = 0;
 
 BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
@@ -15,11 +15,14 @@ BaseDRAMSystem::BaseDRAMSystem(Config &config, const std::string &output_dir,
       write_callback_(write_callback),
       last_req_clk_(0),
       config_(config),
-      timing_(config_),
+      timing_(config_),     // 使用config作为参数创建了对象
 #ifdef THERMAL
       thermal_calc_(config_),
 #endif  // THERMAL
-      clk_(0) {
+      clk_(0) 
+// 参数化列表结束
+{
+        
     total_channels_ += config_.channels;
 
 #ifdef ADDR_TRACE
@@ -50,29 +53,31 @@ void BaseDRAMSystem::PrintEpochStats() {
     return;
 }
 
+// 输出内存控制器状态到.json文件
 void BaseDRAMSystem::PrintStats() {
     // Finish epoch output, remove last comma and append ]
     std::ofstream epoch_out(config_.json_epoch_name, std::ios_base::in |
                                                          std::ios_base::out |
                                                          std::ios_base::ate);
-    epoch_out.seekp(-2, std::ios_base::cur);
-    epoch_out.write("]", 1);
-    epoch_out.close();
+    epoch_out.seekp(-2, std::ios_base::cur);    // 打开json_epoch_name文件, 将指针移动到倒数第二个位置
+    epoch_out.write("]", 1);    // 加入[
+    epoch_out.close();          // 关闭文件
 
-    std::ofstream json_out(config_.json_stats_name, std::ofstream::out);
-    json_out << "{";
+    std::ofstream json_out(config_.json_stats_name, std::ofstream::out);    // 创建一个名为json_stats_name的输出文件流对象
+    json_out << "{";        // 先输出一个{
 
     // close it now so that each channel can handle it
     json_out.close();
-    for (size_t i = 0; i < ctrls_.size(); i++) {
+    for (size_t i = 0; i < ctrls_.size(); i++) {    // 遍历cotrol类
         ctrls_[i]->PrintFinalStats();
-        if (i != ctrls_.size() - 1) {
-            std::ofstream chan_out(config_.json_stats_name, std::ofstream::app);
-            chan_out << "," << std::endl;
+        if (i != ctrls_.size() - 1) {       // 如果不是最后一个控制器
+            std::ofstream chan_out(config_.json_stats_name, std::ofstream::app);    // 创建chan_out对象, 打开json_stats_name文件, 追加写入信息
+            chan_out << "," << std::endl;       // 输出, 和换行符
         }
     }
-    json_out.open(config_.json_stats_name, std::ofstream::app);
-    json_out << "}";
+
+    json_out.open(config_.json_stats_name, std::ofstream::app);     // 再次打开json_stats_name文件
+    json_out << "}";    // 输出}用于结束json对象
 
 #ifdef THERMAL
     thermal_calc_.PrintFinalPT(clk_);
@@ -93,16 +98,18 @@ void BaseDRAMSystem::RegisterCallbacks(
     write_callback_ = write_callback;
 }
 
+// 在子类的构造函数显式调用父类的构造函数来初始化父类的成员变量
 JedecDRAMSystem::JedecDRAMSystem(Config &config, const std::string &output_dir,
                                  std::function<void(uint64_t)> read_callback,
                                  std::function<void(uint64_t)> write_callback)
     : BaseDRAMSystem(config, output_dir, read_callback, write_callback) {
+    // 检查是否为HMC
     if (config_.IsHMC()) {
         std::cerr << "Initialized a memory system with an HMC config file!"
                   << std::endl;
         AbruptExit(__FILE__, __LINE__);
     }
-
+    // reserve()用于预留存储空间来容纳一定数量的元素. 在添加元素预留元素空间
     ctrls_.reserve(config_.channels);
     for (auto i = 0; i < config_.channels; i++) {
 #ifdef THERMAL
@@ -144,6 +151,7 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
     return ok;
 }
 
+// DRAM时钟节拍
 void JedecDRAMSystem::ClockTick() {
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier

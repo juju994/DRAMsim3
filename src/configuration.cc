@@ -33,8 +33,8 @@ Config::Config(std::string config_file, std::string out_dir)
     CalculateSize();            // 计算大小
     SetAddressMapping();        // 设置地址映射初始化
     InitTimingParams();         // 时序参数初始化
-    InitPowerParams();          // 系统级初始化
-    InitOtherParams();          // 系统级初始化
+    InitPowerParams();          // 功耗参数初始化
+    InitOtherParams();          // 其他参数初始化 (输出路径和文件名)
 #ifdef THERMAL
     InitThermalParams();
 #endif  // THERMAL
@@ -193,17 +193,17 @@ void Config::InitDRAMParams() {
 void Config::InitOtherParams() {
     const auto& reader = *reader_;
     epoch_period = GetInteger("other", "epoch_period", 100000);
-    // determine how much output we want:
-    // -1: no file output at all (NOT implemented yet)
-    // 0: no epoch file output, only outputs the summary in the end
-    // 1: default value, adds epoch CSV output on level 0
-    // 2: adds histogram outputs in a different CSV format
+    // determine how much output we want:   决定需要的输出优化级别
+    // -1: no file output at all (NOT implemented yet)  无文件输出(未开发)
+    // 0: no epoch file output, only outputs the summary in the end     不输出epoch文件, 仅在末尾输出总结
+    // 1: default value, adds epoch CSV output on level 0       默认值, 在级别0的基础上输出epoch excel文件
+    // 2: adds histogram outputs in a different CSV format      在输出端在不同的csv格式文件中增加柱状图输出
     output_level = reader.GetInteger("other", "output_level", 1);
-    // Other Parameters
-    // give a prefix instead of specify the output name one by one...
-    // this would allow outputing to a directory and you can always override
-    // these values
-    if (!DirExist(output_dir)) {
+    // Other Parameters     其他参数
+    // give a prefix instead of specify the output name one by one...       提供前缀,而不是逐个指定输出名称
+    // this would allow outputing to a directory and you can always override these values. 
+    // 使得能够输出到固定路径并且始终覆盖这些值
+    if (!DirExist(output_dir)) {    // 检查输出路径是否存在
         std::cout << "WARNING: Output directory " << output_dir
                   << " not exists! Using current directory for output!"
                   << std::endl;
@@ -211,8 +211,9 @@ void Config::InitOtherParams() {
     } else {
         output_dir = output_dir + "/";
     }
-    output_prefix =
+    output_prefix = 
         output_dir + reader.Get("other", "output_prefix", "dramsim3");
+                            // other组      key值             默认值
     json_stats_name = output_prefix + ".json";
     json_epoch_name = output_prefix + "epoch.json";
     txt_stats_name = output_prefix + ".txt";
@@ -243,11 +244,11 @@ void Config::InitPowerParams() {
     // ACT bank激活
     act_energy_inc =
         VDD * (IDD0 * tRC - (IDD3N * tRAS + IDD2N * tRP)) * devices;
-    // 
+    // read能量
     read_energy_inc = VDD * (IDD4R - IDD3N) * burst_cycle * devices;
-    // 
+    // write能量
     write_energy_inc = VDD * (IDD4W - IDD3N) * burst_cycle * devices;
-    // 
+    // refresh能量
     ref_energy_inc = VDD * (IDD5AB - IDD3N) * tRFC * devices;
     // 
     refb_energy_inc = VDD * (IDD5PB - IDD3N) * tRFCb * devices;

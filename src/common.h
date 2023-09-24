@@ -7,6 +7,7 @@
 
 namespace dramsim3 {
  
+//  地址结构体,由channel, rank, bank group, bank, row, column构成
 struct Address {
     // 默认构造函数
     Address()
@@ -35,6 +36,7 @@ struct Address {
     int column;
 };
 
+// inline关键字, 请求编译器将函数内联展开, 以提升执行效率
 inline uint32_t ModuloWidth(uint64_t addr, uint32_t bit_width, uint32_t pos) {
     addr >>= pos;
     auto store = addr;
@@ -54,48 +56,56 @@ int LogBase2(int power_of_two);
 void AbruptExit(const std::string& file, int line);
 bool DirExist(std::string dir);
 
+// 命令枚举, 枚举值默认从0开始加
 enum class CommandType {
-    READ,
-    READ_PRECHARGE,
-    WRITE,
-    WRITE_PRECHARGE,
-    ACTIVATE,
-    PRECHARGE,
-    REFRESH_BANK,
-    REFRESH,
-    SREF_ENTER,
-    SREF_EXIT,
-    SIZE
+    READ,                   // 读
+    READ_PRECHARGE,         // 读后自动预充电
+    WRITE,                  // 写
+    WRITE_PRECHARGE,        // 写后自动预充电
+    ACTIVATE,               // 激活
+    PRECHARGE,              // 预充电
+    REFRESH_BANK,           // 刷新bank
+    REFRESH,                // 刷新
+    SREF_ENTER,             // 进入自刷新
+    SREF_EXIT,              // 退出自刷新
+    SIZE                    // 枚举元素数量
 };
 
+// Command结构体
 struct Command {
     Command() : cmd_type(CommandType::SIZE), hex_addr(0) {}
     Command(CommandType cmd_type, const Address& addr, uint64_t hex_addr)
         : cmd_type(cmd_type), addr(addr), hex_addr(hex_addr) {}
     // Command(const Command& cmd) {}
 
+    // 检查cmd_type是否等于CommandType最大数量, true表示命令有效
     bool IsValid() const { return cmd_type != CommandType::SIZE; }
+    // 检查cmd_type是否为REFRESH或REFRESH_BANK
     bool IsRefresh() const {
         return cmd_type == CommandType::REFRESH ||
                cmd_type == CommandType::REFRESH_BANK;
     }
+    // 检查cmd_type是否为READ或READ_PRECHARGE
     bool IsRead() const {
         return cmd_type == CommandType::READ ||
                cmd_type == CommandType ::READ_PRECHARGE;
     }
+    // 检查cmd_type是否为WRITE或WRITE_PRECHARGE
     bool IsWrite() const {
         return cmd_type == CommandType ::WRITE ||
                cmd_type == CommandType ::WRITE_PRECHARGE;
     }
+    // 检查cmd_type是否为读写命令
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
+    // 检查为Rank命令??
     bool IsRankCMD() const {
         return cmd_type == CommandType::REFRESH ||
                cmd_type == CommandType::SREF_ENTER ||
                cmd_type == CommandType::SREF_EXIT;
     }
-    CommandType cmd_type;
-    Address addr;
-    uint64_t hex_addr;
+    CommandType cmd_type;       // 构造函数自动赋值
+    Address addr;               // 
+    uint64_t hex_addr;          // 
 
     int Channel() const { return addr.channel; }
     int Rank() const { return addr.rank; }
@@ -104,9 +114,11 @@ struct Command {
     int Row() const { return addr.row; }
     int Column() const { return addr.column; }
 
+    // 友元函数重载输出运算符<<
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
+// 
 struct Transaction {
     Transaction() {}
     Transaction(uint64_t addr, bool is_write)

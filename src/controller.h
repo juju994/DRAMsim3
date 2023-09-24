@@ -17,6 +17,7 @@
 
 namespace dramsim3 {
 
+// RowBuf策略: 打开页, 关闭页
 enum class RowBufPolicy { OPEN_PAGE, CLOSE_PAGE, SIZE };
 
 class Controller {
@@ -51,30 +52,35 @@ class Controller {
     ThermalCalculator &thermal_calc_;
 #endif  // THERMAL
 
-    // queue that takes transactions from CPU side
+    // queue that takes transactions from CPU side  从CPU端接受事件的队列
     bool is_unified_queue_;
+    // std::vector<Transaction> 表示动态数组的容器模板
     std::vector<Transaction> unified_queue_;
     std::vector<Transaction> read_queue_;
     std::vector<Transaction> write_buffer_;
 
-    // transactions that are not completed, use map for convenience
-    std::multimap<uint64_t, Transaction> pending_rd_q_;
-    std::multimap<uint64_t, Transaction> pending_wr_q_;
+    /* std::multimap 是一个关联容器, 用于存储类型为Transaction的对象, 关联的键类型为uint64_t
+        std::multimap容器使用键-值存储数据, 允许多个相同键的值存在, 即一个键可以对应多个值. 
+        需要注意的是, std::multimap会根据键的值自动排序, 即pending_rd_q_中的元素以uint64_t键的升序方式排列. 
+     */
+    // transactions that are not completed, use map for convenience     事件还未完成, 为了方便使用map
+    std::multimap<uint64_t, Transaction> pending_rd_q_;     // 挂起的读队列
+    std::multimap<uint64_t, Transaction> pending_wr_q_;     // 挂起的写队列
 
-    // completed transactions
+    // completed transactions   完成的事件
     std::vector<Transaction> return_queue_;
 
-    // row buffer policy
+    // row buffer policy    行缓冲策略
     RowBufPolicy row_buf_policy_;
 
 #ifdef CMD_TRACE
     std::ofstream cmd_trace_;
 #endif  // CMD_TRACE
 
-    // used to calculate inter-arrival latency
+    // used to calculate inter-arrival latency  用于计算内部到达延迟
     uint64_t last_trans_clk_;
 
-    // transaction queueing
+    // transaction queueing     时间队列
     int write_draining_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);

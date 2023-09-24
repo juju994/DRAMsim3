@@ -47,6 +47,7 @@ int GetBitInPos(uint64_t bits, int pos) {
     return (bits >> pos) & 1;
 }
 
+// 对传入参数求2对数, 例如传入1024,返回10
 int LogBase2(int power_of_two) {
     int i = 0;
     while (power_of_two > 1) {
@@ -74,14 +75,17 @@ void StringSplit(const std::string& s, char delim, Out result) {
     }
 }
 
+// 强制退出文件 并报错
 void AbruptExit(const std::string& file, int line) {
     std::cerr << "Exiting Abruptly - " << file << ":" << line << std::endl;
     std::exit(-1);
 }
 
+// 检查路径是否为空, 路径为空或是文件输出false, 不为空且为文件夹路径返回true
 bool DirExist(std::string dir) {
     // courtesy to stackoverflow
     struct stat info;
+    // string.c_str()  返回一个以空字符结尾的内容的const指针
     if (stat(dir.c_str(), &info) != 0) {
         return false;
     } else if (info.st_mode & S_IFDIR) {

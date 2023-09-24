@@ -16,6 +16,7 @@ void PrintStatText(std::ostream& where, std::string name, T value,
     return;
 }
 
+// 构造函数
 SimpleStats::SimpleStats(const Config& config, int channel_id)
     : config_(config), channel_id_(channel_id) {
     // counter stats
@@ -67,7 +68,7 @@ SimpleStats::SimpleStats(const Config& config, int channel_id)
     InitHistoStat("interarrival_latency",
                   "Request interarrival latency (cycles)", 0, 100, 10);
 
-    // some irregular stats
+    // some irregular stats -----caculated stats-----
     InitStat("average_bandwidth", "calculated", "Average bandwidth");
     InitStat("total_energy", "calculated", "Total energy (pJ)");
     InitStat("average_power", "calculated", "Average power (mW)");
@@ -173,8 +174,10 @@ void SimpleStats::Reset() {
     }
 }
 
+// 初始化状态, 元素写入顺序与存储顺序无关, 仅有输入键的哈希值决定存储位置
 void SimpleStats::InitStat(std::string name, std::string stat_type,
                            std::string description) {
+    // 把传入参数以键值对的形式插入map名称描述map中
     header_descs_.emplace(name, description);
     if (stat_type == "counter") {
         counters_.emplace(name, 0);
@@ -189,6 +192,7 @@ void SimpleStats::InitStat(std::string name, std::string stat_type,
 void SimpleStats::InitVecStat(std::string name, std::string stat_type,
                               std::string description, std::string part_name,
                               int vec_len) {
+    // 对传入的vec_len分别进行编号
     for (int i = 0; i < vec_len; i++) {
         std::string trailing = "." + std::to_string(i);
         std::string actual_name = name + trailing;
@@ -196,34 +200,39 @@ void SimpleStats::InitVecStat(std::string name, std::string stat_type,
         header_descs_.emplace(actual_name, actual_desc);
     }
     if (stat_type == "vec_counter") {
-        vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
+        vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0)); // 初始化vector的数量为vec_len, 每个元素都为0
         epoch_vec_counters_.emplace(name, std::vector<uint64_t>(vec_len, 0));
     } else if (stat_type == "vec_double") {
         vec_doubles_.emplace(name, std::vector<double>(vec_len, 0));
     }
 }
 
+// 初始化直方图统计
 void SimpleStats::InitHistoStat(std::string name, std::string description,
                                 int start_val, int end_val, int num_bins) {
     int bin_width = (end_val - start_val) / num_bins;
-    bin_widths_.emplace(name, bin_width);
-    histo_bounds_.emplace(name, std::make_pair(start_val, end_val));
+    bin_widths_.emplace(name, bin_width);   // 计算不同name的直方图bin宽度
+    // 向histo_bounds_插入键值对, name为键, std::make_pair(start_val, end_val)为值, 指定了直方图的起始值和结束值的范围
+    histo_bounds_.emplace(name, std::make_pair(start_val, end_val));    
+    // 向histo_counts_加入键值对, name为键, std::unordered_map<int, uint64_t>() (int为键, 值表示键出现的次数), 该容器用于存储每个直方图的值和对应的出现次数
     histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
+    // 向epoch_histo_counts_加入键值对, name为键, std::unordered_map<int, uint64_t>() (int为键, 值表示键出现的次数), 
+    // 该容器用于存储每个直方图的时间片(epoch)的值和对应的出现次数
     epoch_histo_counts_.emplace(name, std::unordered_map<int, uint64_t>());
 
     // initialize headers, descriptions
-    std::vector<std::string> headers;
-    auto header = fmt::format("{}[-{}]", name, start_val);
-    headers.push_back(header);
-    header_descs_.emplace(header, description);
+    std::vector<std::string> headers;   // 空字符串向量
+    auto header = fmt::format("{}[-{}]", name, start_val);  // 第一个区间
+    headers.push_back(header);      // 将header加入到headers中
+    header_descs_.emplace(header, description); // 添加注释
     for (int i = 1; i < num_bins + 1; i++) {
         int bucket_start = start_val + (i - 1) * bin_width;
         int bucket_end = start_val + i * bin_width - 1;
-        header = fmt::format("{}[{}-{}]", name, bucket_start, bucket_end);
+        header = fmt::format("{}[{}-{}]", name, bucket_start, bucket_end);  // 中间区间
         headers.push_back(header);
         header_descs_.emplace(header, description);
     }
-    header = fmt::format("{}[{}-]", name, end_val);
+    header = fmt::format("{}[{}-]", name, end_val);     // 最后一个区间
     headers.push_back(header);
     header_descs_.emplace(header, description);
 

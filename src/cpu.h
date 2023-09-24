@@ -45,7 +45,7 @@ class CPU {
 // 随机CPU, 继承自CPU
 class RandomCPU : public CPU {
    public:
-    using CPU::CPU;             // 使用声明, 使得基类CPU中的构造函数对与派生类RandomCPU可见, 并且可以直接调用, 
+    using CPU::CPU;             // 使用声明, 使得基类CPU中的构造函数对于派生类RandomCPU可见, 并且可以直接调用, 
     // 使得我们可以在RandomCPU对象的构造函数中使用与基类构造函数相同的参数列表来调用基类构造函数, 并获得相同的行为
     //对基类CPU中纯虚函数的重写, override关键词明确表示为对基类的重写
     
@@ -74,7 +74,7 @@ class StreamCPU : public CPU {
     bool inserted_b_ = false;   
     bool inserted_c_ = false;   
     const uint64_t array_size_ = 2 << 20;  // elements in array 阵列中的元素数量
-    const int stride_ = 64;                // stride in bytes   字节之间的间隔
+    const int stride_ = 64;                // stride in bytes   间隔64字节
 };
 
 // 基于追踪的CPU
