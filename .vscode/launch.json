@@ -69,6 +69,20 @@
                     }
                 ]
             }
+        },
+
+        {
+            "name": "Python_plot",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            // 这个args第一个参数会默认填"program"的字符串, 第二个参数才开始填"args"里面的
+            // 例如: xxxxx /home/juju/Desktop/code/DRAMsim3/scripts/plot_stats.py dramsim3.json 
+            // 前面xxxxx是python调试器的地址
+            "args": ["dramsim3.json"]
         }
     ]
 }
