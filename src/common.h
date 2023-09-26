@@ -65,9 +65,9 @@ enum class CommandType {
     ACTIVATE,               // 激活
     PRECHARGE,              // 预充电
     REFRESH_BANK,           // 刷新bank
-    REFRESH,                // 刷新
-    SREF_ENTER,             // 进入自刷新
-    SREF_EXIT,              // 退出自刷新
+    REFRESH,                // 刷新(rank级)
+    SREF_ENTER,             // 进入自刷新(rank级)
+    SREF_EXIT,              // 退出自刷新(rank级)
     SIZE                    // 枚举元素数量
 };
 
@@ -97,7 +97,7 @@ struct Command {
     }
     // 检查cmd_type是否为读写命令
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
-    // 检查为Rank命令??
+    // 检查为Rank级命令: REFRESH 或 SREF_ENTER 或 SREF_EXIT
     bool IsRankCMD() const {
         return cmd_type == CommandType::REFRESH ||
                cmd_type == CommandType::SREF_ENTER ||

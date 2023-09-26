@@ -84,6 +84,7 @@ Timing::Timing(const Config& config)
 
         // command READ
         same_bank[static_cast<int>(CommandType::READ)] =
+        // std::vector<std::pair<CommandType, int> >{}  对括号内的
             std::vector<std::pair<CommandType, int> >{
                 {CommandType::READ, read_to_read_l},
                 {CommandType::WRITE, read_to_write},

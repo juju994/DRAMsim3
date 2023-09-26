@@ -20,7 +20,19 @@ BankState::BankState()
     cmd_timing_[static_cast<int>(CommandType::SREF_EXIT)] = 0;
 }
 
-
+/*
+    每个bank检查获取就绪命令
+    参数: 
+        const Command& cmd   传入cmd命令
+        uint64_t clk         clk时序要求
+    返回: 
+        Command     情况1: 返回空的Comamnd(), 即 cmd.cmd_type == CommandType::SIZE
+                    情况2: 返回与传入cmd.cmd_type不一样的cmd_type, 即表示为传入命令的前提条件
+                    情况3: 返回与传入cmd.cmd_type相等的cmd_type, 即表示当前命令已经就绪
+                    情况4: 命令时序致命错误, 直接报错退出
+    Notes: 检查完成的输出命令还需要满足cmd_timing_中的时序要求. 时序条件满足后返回一个Command类输出, 
+           其中.cmd_type为就绪命令或前提命令, .addr等信息与传入cmd.addr相同
+*/
 Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
     // required_type的默认值为SIZE
     CommandType required_type = CommandType::SIZE;
@@ -99,20 +111,21 @@ Command BankState::GetReadyCommand(const Command& cmd, uint64_t clk) const {
     return Command();
 }
 
+// 根据当前bank状态和输入cmd参数更新bank状态, 如果存在非法命令则直接报错
 void BankState::UpdateState(const Command& cmd) {
     switch (state_) {
-        case State::OPEN:
+        case State::OPEN:                   // bank已经打开
             switch (cmd.cmd_type) {
                 case CommandType::READ:
                 case CommandType::WRITE:
-                    row_hit_count_++;
+                    row_hit_count_++;       // bank以及打开且为读写命令就自增row_hit计数器
                     break;
                 case CommandType::READ_PRECHARGE:
                 case CommandType::WRITE_PRECHARGE:
                 case CommandType::PRECHARGE:
-                    state_ = State::CLOSED;
-                    open_row_ = -1;
-                    row_hit_count_ = 0;
+                    state_ = State::CLOSED; // 状态更新为关闭
+                    open_row_ = -1;         // 复位打开行
+                    row_hit_count_ = 0;     // 清零row_hit计数器
                     break;
                 case CommandType::ACTIVATE:
                 case CommandType::REFRESH:
@@ -123,17 +136,17 @@ void BankState::UpdateState(const Command& cmd) {
                     AbruptExit(__FILE__, __LINE__);
             }
             break;
-        case State::CLOSED:
+        case State::CLOSED:                   // bank已经关闭
             switch (cmd.cmd_type) {
                 case CommandType::REFRESH:
                 case CommandType::REFRESH_BANK:
-                    break;
-                case CommandType::ACTIVATE:
-                    state_ = State::OPEN;
-                    open_row_ = cmd.Row();
+                    break;                          // 刷新和bank级刷新都直接退出 (保持关闭状态?)
+                case CommandType::ACTIVATE: 
+                    state_ = State::OPEN;           // 激活命令会把bank状态改为打开
+                    open_row_ = cmd.Row();          // 更新打开行
                     break;
                 case CommandType::SREF_ENTER:
-                    state_ = State::SREF;
+                    state_ = State::SREF;           // 进入自刷新模式
                     break;
                 case CommandType::READ:
                 case CommandType::WRITE:
@@ -146,10 +159,10 @@ void BankState::UpdateState(const Command& cmd) {
                     AbruptExit(__FILE__, __LINE__);
             }
             break;
-        case State::SREF:
+        case State::SREF:                   // 自刷新模式
             switch (cmd.cmd_type) {
                 case CommandType::SREF_EXIT:
-                    state_ = State::CLOSED;
+                    state_ = State::CLOSED;     // 退出自刷新模式回到关闭模式
                     break;
                 case CommandType::READ:
                 case CommandType::WRITE:
@@ -164,15 +177,24 @@ void BankState::UpdateState(const Command& cmd) {
                     AbruptExit(__FILE__, __LINE__);
             }
             break;
-        default:
+        default:                   // 错误处理
             AbruptExit(__FILE__, __LINE__);
     }
     return;
 }
 
+/*
+    根据传入cmd_type在cmd_timing_中更新对应命令中的可执行时刻点
+    参数: 
+        CommandType cmd_type
+        uint64_t time       传入时刻点
+    返回: 
+        NULL
+    Notes: 对BankState.cmd_timing_[CommandType]<int> 进行操作
+*/
 void BankState::UpdateTiming(CommandType cmd_type, uint64_t time) {
-    cmd_timing_[static_cast<int>(cmd_type)] =
-        std::max(cmd_timing_[static_cast<int>(cmd_type)], time);
+    cmd_timing_[static_cast<int>(cmd_type)] =       // 先把cmd_type变换为int型, 用于在cmd_timing_中寻址 (每种命令一个index, 对应值放的time)
+        std::max(cmd_timing_[static_cast<int>(cmd_type)], time);    // 比较cmd_timing_里的值和传入的time参数, 取最大值更新cmd_timing_对于位置
     return;
 }
 
