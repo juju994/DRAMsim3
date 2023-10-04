@@ -148,12 +148,12 @@ class Config {
 
     // System
     std::string address_mapping;                // 地址映射(一定要12个字符)
-    std::string queue_structure;                // 队列结构        
-    std::string row_buf_policy;                 // 行缓存器策略
-    RefreshPolicy refresh_policy;               // 刷新策略
-    int cmd_queue_size;                         // 命令队列尺寸
+    std::string queue_structure;                // 队列结构        default: PER_BANK
+    std::string row_buf_policy;                 // 行缓存器策略     default: OPEN_PAGE
+    RefreshPolicy refresh_policy;               // 刷新策略        default: RANK_LEVEL_STAGGERED(Rank级交错)
+    int cmd_queue_size;                         // 命令队列尺寸     default: 8
     bool unified_queue;                         // 统一队列？
-    int trans_queue_size;                       // ？队列尺寸
+    int trans_queue_size;                       // ？队列尺寸       default: 32
     int write_buf_size;                         // 写buf尺寸
     bool enable_self_refresh;                   // 使能自刷新
     int sref_threshold;                         // 自刷新阈值？

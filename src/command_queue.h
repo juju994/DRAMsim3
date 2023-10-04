@@ -10,9 +10,9 @@
 
 namespace dramsim3 {
 
-using CMDIterator = std::vector<Command>::iterator;
-using CMDQueue = std::vector<Command>;
-enum class QueueStructure { PER_RANK, PER_BANK, SIZE };
+using CMDIterator = std::vector<Command>::iterator;         // iterator表示vector容器的迭代器类型, 用于遍历容器中的元素
+using CMDQueue = std::vector<Command>;                      // CMDQueue为一个可变长Command类数组
+enum class QueueStructure { PER_RANK, PER_BANK, SIZE };     // 队列结构枚举类 (每rank / 每bank)
 
 class CommandQueue {
    public:
@@ -25,7 +25,7 @@ class CommandQueue {
     bool AddCommand(Command cmd);
     bool QueueEmpty() const;
     int QueueUsage() const;
-    std::vector<bool> rank_q_empty;
+    std::vector<bool> rank_q_empty;     // rank队列是否为空数组
 
    private:
     bool ArbitratePrecharge(const CMDIterator& cmd_it,
@@ -38,6 +38,7 @@ class CommandQueue {
     CMDQueue& GetNextQueue();
     void GetRefQIndices(const Command& ref);
     void EraseRWCommand(const Command& cmd);
+    // 这个函数未定义
     Command PrepRefCmd(const CMDIterator& it, const Command& ref) const;
 
     QueueStructure queue_structure_;
@@ -45,15 +46,15 @@ class CommandQueue {
     const ChannelState& channel_state_;
     SimpleStats& simple_stats_;
 
-    std::vector<CMDQueue> queues_;
+    std::vector<CMDQueue> queues_;      // 二维数组
 
-    // Refresh related data structures
-    std::unordered_set<int> ref_q_indices_;
-    bool is_in_ref_;
+    // Refresh related data structures  刷新相关数据结构体
+    std::unordered_set<int> ref_q_indices_;     // 无序集合, 用于存储int型元素(不是键值对, 就是数组)
+    bool is_in_ref_;    // 是否在刷新状态
 
-    int num_queues_;
-    size_t queue_size_;
-    int queue_idx_;
+    int num_queues_;        // 维护的命令队列数量(与命令队列结构有关)
+    size_t queue_size_;     // 麦格命令队列的大小 size_t = unsigned long
+    int queue_idx_;         // 全局队列计数
     uint64_t clk_;
 };
 

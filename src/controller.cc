@@ -26,7 +26,9 @@ Controller::Controller(int channel, const Config &config, const Timing &timing)
                           ? RowBufPolicy::CLOSE_PAGE
                           : RowBufPolicy::OPEN_PAGE),
       last_trans_clk_(0),
-      write_draining_(0) {
+      write_draining_(0) 
+      
+{
     if (is_unified_queue_) {
         unified_queue_.reserve(config_.trans_queue_size);
     } else {

@@ -33,7 +33,8 @@ class BankState {
     State state_;
 
     // Earliest time when the particular Command can be executed in this bank
-    // 在此bank中执行特定命令的最早时间     cmd_timing_[CommandType]<int>
+    // 在此bank中执行特定命令的最早时间     cmd_timing_[CommandType]<int>   
+    // 每次更新时序时的时候会根据上一个命令从时序查找表中取出对下一条命令的要求(命令,时序)向量, 更新到cmd_timing_, 即可以直接用下一个命令类型寻址有效时刻
     std::vector<uint64_t> cmd_timing_;  
 
     // Currently open row   当前打开行

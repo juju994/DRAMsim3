@@ -68,7 +68,7 @@ enum class CommandType {
     REFRESH,                // 刷新(rank级)
     SREF_ENTER,             // 进入自刷新(rank级)
     SREF_EXIT,              // 退出自刷新(rank级)
-    SIZE                    // 枚举元素数量
+    SIZE                    // 枚举元素数量, 用于判断命令是否无效
 };
 
 // Command结构体
@@ -95,7 +95,7 @@ struct Command {
         return cmd_type == CommandType ::WRITE ||
                cmd_type == CommandType ::WRITE_PRECHARGE;
     }
-    // 检查cmd_type是否为读写命令
+    // 检查cmd_type是否为读写命令   true->读或写命令    fasle->不是
     bool IsReadWrite() const { return IsRead() || IsWrite(); }
     // 检查为Rank级命令: REFRESH 或 SREF_ENTER 或 SREF_EXIT
     bool IsRankCMD() const {
