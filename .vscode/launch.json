@@ -8,7 +8,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/build/dramsim3main",
             // ./表示当前目录  ../表示上一级目录，整体目录结构为build文件夹上一级文件夹（DRAMSim3）的configs目录
-            "args": ["./../configs/DDR4_8Gb_x8_3200.ini", "--cycles=200000", "--stream=random"],
+            "args": ["./../configs/DDR4_8Gb_x8_3200.ini", "--cycles=100000", "--stream=random"],
             "stopAtEntry": true,
             "cwd": "${workspaceRoot}/build",
             "environment": [],
