@@ -27,9 +27,9 @@ enum class DRAMProtocol {
     SIZE
 };
 
-// 刷新策略 RANK级同步/RANK级交错/BANK级交错
+// 刷新策略 RANK级同步/RANK级交错(默认刷新方式)/BANK级交错
 enum class RefreshPolicy {
-    RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement (由于功耗太好不太现实)
+    RANK_LEVEL_SIMULTANEOUS,  // impractical due to high power requirement (由于功耗太高不太现实)
     RANK_LEVEL_STAGGERED,
     BANK_LEVEL_STAGGERED,
     SIZE 
@@ -45,9 +45,9 @@ class Config {
     int channel_size;                   // 通道大小(MB) 整个系统的channel尺寸(也可理解为总容量)
     int channels;                       // 通道数量
     int ranks;                          // rank的数量 = channel_size / 每rank容量(MB) 计算得到
-    int banks;                          // bank总数量 = bankgroups * banks_per_group 计算得到
-    int bankgroups;                     // bank组
-    int banks_per_group;                // 每组bank数量
+    int banks;                          // bank总数量 = bankgroups * banks_per_group 计算得到       default: 4
+    int bankgroups;                     // bank组               default: 2
+    int banks_per_group;                // 每组bank数量          default: 2
     int rows;                           // 行数
     int columns;                        // 列数     为避免歧义, 配置文件中colums特指列的物理宽度
     int device_width;                   // die位宽
@@ -152,10 +152,10 @@ class Config {
     std::string row_buf_policy;                 // 行缓存器策略     default: OPEN_PAGE
     RefreshPolicy refresh_policy;               // 刷新策略        default: RANK_LEVEL_STAGGERED(Rank级交错)
     int cmd_queue_size;                         // 命令队列尺寸     default: 8
-    bool unified_queue;                         // 统一队列？
-    int trans_queue_size;                       // ？队列尺寸       default: 32
+    bool unified_queue;                         // 读写事件是否使用同一队列       default: false
+    int trans_queue_size;                       // 事件队列尺寸                 default: 32
     int write_buf_size;                         // 写buf尺寸
-    bool enable_self_refresh;                   // 使能自刷新
+    bool enable_self_refresh;                   // 使能自刷新       default: false
     int sref_threshold;                         // 自刷新阈值？
     bool aggressive_precharging_enabled;        // 严格预充电使能
     bool enable_hbm_dual_cmd;                   // 是能HBM双指令？

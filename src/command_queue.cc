@@ -227,11 +227,11 @@ CMDQueue& CommandQueue::GetNextQueue() {
         const Command& ref  刷新队列首个命令
     返回: 
        NULL
-    Notes: 传入ref参数要么是REFRESH, 要么是REFRESH_BANK
+    Notes: 传入ref参数要么是REFRESH(Rank级刷新), 要么是REFRESH_BANK(Bank级刷新)
 */
 void CommandQueue::GetRefQIndices(const Command& ref) {
     if (ref.cmd_type == CommandType::REFRESH) {
-        // 队列类型
+        // 队列类型为PER_BANK
         if (queue_structure_ == QueueStructure::PER_BANK) {
             for (int i = 0; i < num_queues_; i++) {
                 // 在PER_BANK型的命令队列中, 对于ref_q_indices_的更新还是以rank为单位的(这个rank里面的所有bank都会插入)
@@ -239,7 +239,7 @@ void CommandQueue::GetRefQIndices(const Command& ref) {
                     ref_q_indices_.insert(i);
                 }
             }
-        } else {
+        } else {    // 队列类型为PER_RANK
             ref_q_indices_.insert(ref.Rank());
         }
     } else {  // refb
@@ -336,6 +336,13 @@ void CommandQueue::EraseRWCommand(const Command& cmd) {
     exit(1);
 }
 
+/*
+    获得queues_的占用数量
+    参数: 
+        NULL
+    返回: 
+        int   queues_中所有queue长度值累加值
+*/
 int CommandQueue::QueueUsage() const {
     int usage = 0;
     for (auto i = queues_.begin(); i != queues_.end(); i++) {

@@ -30,6 +30,7 @@ class CPU {
     virtual void ClockTick() = 0;       // 纯虚函数, 没有实现, 在派生类中必须被重写实现
 
     // 回调函数好像没有实现任何逻辑,只是占位函数?
+    /* 读写回调函数就是在这里定义的!!! */
     void ReadCallBack(uint64_t addr) { return; }
     void WriteCallBack(uint64_t addr) { return; }
 

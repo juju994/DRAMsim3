@@ -248,7 +248,8 @@ bool Controller::AddTransaction(Transaction trans) {
         NULL
     返回: 
         NULL
-    Notes: 
+    Notes: 从读写buffer中拿出事件元素, 转换成命令后加入到命令队列cmd_queue_中
+    函数优先调度写入事件, 对于写入事件还会检查挂起读队列中有没有相同地址的, 如果有会进行读后写合并. 
 */
 void Controller::ScheduleTransaction() {
     // determine whether to schedule read or write
@@ -264,7 +265,7 @@ void Controller::ScheduleTransaction() {
         }
     }
 
-    // 根据2个3目运算符, 实现queue地址的选择is_unified_queue_如果为true, 就将unified_queue_的地址赋给queue
+    // 根据2个3目运算符, 实现queue地址的选择. is_unified_queue_如果为true, 就将unified_queue_的地址赋给queue
     // 否则就再判定write_draining_是否>0, >0就将write_buffer_赋给queue, 否则就赋值read_queue_
     std::vector<Transaction> &queue =
         is_unified_queue_ ? unified_queue_
@@ -273,7 +274,7 @@ void Controller::ScheduleTransaction() {
     for (auto it = queue.begin(); it != queue.end(); it++) {
         // 从事件中获取命令
         auto cmd = TransToCommand(*it);
-        // 检查对应bank的命令队列是否已满
+        // 检查对应bank的命令队列是否还有空间
         if (cmd_queue_.WillAcceptCommand(cmd.Rank(), cmd.Bankgroup(),
                                          cmd.Bank())) {
             // 非均一队列 并且 写命令
@@ -285,8 +286,8 @@ void Controller::ScheduleTransaction() {
                 }
                 write_draining_ -= 1;
             }
-
-            cmd_queue_.AddCommand(cmd);     // 在命令队列中添加命令
+            // 在命令队列中添加命令
+            cmd_queue_.AddCommand(cmd);     
             queue.erase(it);        // 删除读写缓冲中的当前元素
             break;
         }
@@ -294,6 +295,14 @@ void Controller::ScheduleTransaction() {
     }
 }
 
+/*
+    处理命令
+    参数: 
+        const Command &cmd      传入的命令
+    返回: 
+        NULL
+    Notes: 函数优先调度写入事件, 对于写入事件还会检查挂起读队列中有没有相同地址的, 如果有会进行读后写合并. 
+*/
 void Controller::IssueCommand(const Command &cmd) {
 #ifdef CMD_TRACE
     cmd_trace_ << std::left << std::setw(18) << clk_ << " " << cmd << std::endl;
@@ -303,32 +312,40 @@ void Controller::IssueCommand(const Command &cmd) {
     thermal_calc_.UpdateCMDPower(channel_id_, cmd, clk_);
 #endif  // THERMAL
     // if read/write, update pending queue and return queue
+    // 如果为读写命令, 更新挂起队列和返回队列
+
+    // 读
     if (cmd.IsRead()) {
-        auto num_reads = pending_rd_q_.count(cmd.hex_addr);
-        if (num_reads == 0) {
+        auto num_reads = pending_rd_q_.count(cmd.hex_addr);     // 获得传入地址在读挂起队列中的数量
+        if (num_reads == 0) {       // 传入地址在读挂起队列中没有对应元素, 报错退出
             std::cerr << cmd.hex_addr << " not in read queue! " << std::endl;
             exit(1);
         }
         // if there are multiple reads pending return them all
+        // 如果有多个读挂起, 则将其全部返回(同一地址)
         while (num_reads > 0) {
             auto it = pending_rd_q_.find(cmd.hex_addr);
-            it->second.complete_cycle = clk_ + config_.read_delay;
-            return_queue_.push_back(it->second);
-            pending_rd_q_.erase(it);
+            it->second.complete_cycle = clk_ + config_.read_delay;  // 读命令最后的结束时间 = 命令处理时间+读延时
+            return_queue_.push_back(it->second);        // 又放到了return_queue中?
+            pending_rd_q_.erase(it);        // 从挂起队列中删除
             num_reads -= 1;
         }
-    } else if (cmd.IsWrite()) {
+    } 
+    // 写
+    else if (cmd.IsWrite()) {
         // there should be only 1 write to the same location at a time
+        // 同一时刻对同一位置只能有一个写入命令
         auto it = pending_wr_q_.find(cmd.hex_addr);
-        if (it == pending_wr_q_.end()) {
+        if (it == pending_wr_q_.end()) {        // 返回end即表示没找到
             std::cerr << cmd.hex_addr << " not in write queue!" << std::endl;
             exit(1);
         }
-        auto wr_lat = clk_ - it->second.added_cycle + config_.write_delay;
+        auto wr_lat = clk_ - it->second.added_cycle + config_.write_delay;  // 写延迟 = 当前时刻 - 时间添加时刻 + 写入延迟
         simple_stats_.AddValue("write_latency", wr_lat);
-        pending_wr_q_.erase(it);
+        pending_wr_q_.erase(it);        // 从挂起队列删除元素
     }
     // must update stats before states (for row hits)
+    // 必须在更新状态前更新统计量 (为了row hits的计算)
     UpdateCommandStats(cmd);
     channel_state_.UpdateTimingAndStates(cmd, clk_);
 }

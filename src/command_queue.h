@@ -46,11 +46,11 @@ class CommandQueue {
     const ChannelState& channel_state_;
     SimpleStats& simple_stats_;
 
-    std::vector<CMDQueue> queues_;      // 二维数组
+    std::vector<CMDQueue> queues_;      // 二维数组 queues_[num_queues_(bank或rank号)][cmd_queue_size(设定的queue大小)]
 
     // Refresh related data structures  刷新相关数据结构体
-    std::unordered_set<int> ref_q_indices_;     // 无序集合, 用于存储int型元素(不是键值对, 就是数组)
-    bool is_in_ref_;    // 是否在刷新状态
+    std::unordered_set<int> ref_q_indices_;     // 无序集合, 用于存储int型元素(不是键值对, 就是数组) 记录有哪些bank或者rank处于刷新状态
+    bool is_in_ref_;        // 是否在刷新状态
 
     int num_queues_;        // 维护的命令队列数量(与命令队列结构有关)
     size_t queue_size_;     // 麦格命令队列的大小 size_t = unsigned long

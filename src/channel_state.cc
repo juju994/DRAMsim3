@@ -104,11 +104,13 @@ void ChannelState::BankNeedRefresh(int rank, int bankgroup, int bank,
 void ChannelState::RankNeedRefresh(int rank, bool need) {
     if (need) {
         Address addr = Address(-1, rank, -1, -1, -1, -1);
-        refresh_q_.emplace_back(CommandType::REFRESH, addr, -1);
+        refresh_q_.emplace_back(CommandType::REFRESH, addr, -1);    // CommandType::REFRESH, addr, -1参数对Cmomand类进行初始化
     } else {
+        // 在刷新队列中从头开始遍历
         for (auto it = refresh_q_.begin(); it != refresh_q_.end(); it++) {
+            // 队列中的元素和传入rank相等
             if (it->Rank() == rank) {
-                refresh_q_.erase(it);
+                refresh_q_.erase(it);   // 删除该节点
                 break;
             }
         }

@@ -17,8 +17,8 @@ class Refresh {
     uint64_t clk_;
     int refresh_interval_;
     const Config& config_;
-    ChannelState& channel_state_;
-    RefreshPolicy refresh_policy_;
+    ChannelState& channel_state_;           // 通道状态
+    RefreshPolicy refresh_policy_;          // 刷新策略
 
     int next_rank_, next_bg_, next_bank_;
 

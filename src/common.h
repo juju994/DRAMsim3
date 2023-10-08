@@ -118,24 +118,26 @@ struct Command {
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
-// 
+// 事件类
 struct Transaction {
-    Transaction() {}
-    Transaction(uint64_t addr, bool is_write)
+    // 提供三个构造函数
+    Transaction() {}    // 全部默认构造
+    Transaction(uint64_t addr, bool is_write)   // 根据输入地址进行构造
         : addr(addr),
           added_cycle(0),
           complete_cycle(0),
           is_write(is_write) {}
-    Transaction(const Transaction& tran)
+    Transaction(const Transaction& tran)    // 根据传入事件类地址进行构造
         : addr(tran.addr),
           added_cycle(tran.added_cycle),
           complete_cycle(tran.complete_cycle),
           is_write(tran.is_write) {}
-    uint64_t addr;
-    uint64_t added_cycle;
-    uint64_t complete_cycle;
-    bool is_write;
+    uint64_t addr;                      // 事件地址
+    uint64_t added_cycle;               // 加入周期
+    uint64_t complete_cycle;            // 结束周期
+    bool is_write;                      // 是否为写入事件 true->写入    false->读取
 
+    // 格式化流输出, 重载<<和>>???
     friend std::ostream& operator<<(std::ostream& os, const Transaction& trans);
     friend std::istream& operator>>(std::istream& is, Transaction& trans);
 };

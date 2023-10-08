@@ -153,8 +153,12 @@ bool JedecDRAMSystem::AddTransaction(uint64_t hex_addr, bool is_write) {
 
 // DRAM时钟节拍
 void JedecDRAMSystem::ClockTick() {
+    // 遍历每个控制器 (一个通道一个吗???)
     for (size_t i = 0; i < ctrls_.size(); i++) {
         // look ahead and return earlier
+        /* 因为ReturnDoneTrans写法的问题, 每次匹配完成后只会返回一个完成事件的键值对信息, 
+           因此使用一个死循环将return_queue中满足条件的所有元素全部取出, 
+           直到没有元素满足条件返回<-1,-1>时结束循环 */
         while (true) {
             auto pair = ctrls_[i]->ReturnDoneTrans(clk_);
             if (pair.second == 1) {
@@ -166,11 +170,13 @@ void JedecDRAMSystem::ClockTick() {
             }
         }
     }
+    // 一样遍历所有的控制器
     for (size_t i = 0; i < ctrls_.size(); i++) {
         ctrls_[i]->ClockTick();
     }
     clk_++;
 
+    // 热模型相关
     if (clk_ % config_.epoch_period == 0) {
         PrintEpochStats();
     }

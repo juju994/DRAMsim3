@@ -27,6 +27,7 @@ class ChannelState {
         return bank_states_[rank][bankgroup][bank].IsRowOpen();
     }
     bool IsAllBankIdleInRank(int rank) const;
+    // 返回输入Rank是否处于自刷新状态(由rank_is_sref_维护)
     bool IsRankSelfRefreshing(int rank) const { return rank_is_sref_[rank]; }
     bool IsRefreshWaiting() const { return !refresh_q_.empty(); }
     bool IsRWPendingOnRef(const Command& cmd) const;
@@ -37,7 +38,7 @@ class ChannelState {
     int OpenRow(int rank, int bankgroup, int bank) const {
         return bank_states_[rank][bankgroup][bank].OpenRow();
     }
-
+    // 调用传入参数指向的bank中的rowhit计数值
     int RowHitCount(int rank, int bankgroup, int bank) const {
         return bank_states_[rank][bankgroup][bank].RowHitCount();
     };
