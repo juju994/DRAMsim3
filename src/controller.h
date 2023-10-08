@@ -32,7 +32,7 @@ class Controller {
     bool WillAcceptTransaction(uint64_t hex_addr, bool is_write) const;
     bool AddTransaction(Transaction trans);
     int QueueUsage() const;
-    // Stats output
+    // Stats output     统计输出
     void PrintEpochStats();
     void PrintFinalStats();
     void ResetStats() { simple_stats_.Reset(); }
@@ -41,7 +41,7 @@ class Controller {
     int channel_id_;
 
    private:
-    uint64_t clk_;
+    uint64_t clk_;          // 控制器当前时钟值
     const Config &config_;
     SimpleStats simple_stats_;
     ChannelState channel_state_;
@@ -52,12 +52,15 @@ class Controller {
     ThermalCalculator &thermal_calc_;
 #endif  // THERMAL
 
-    // queue that takes transactions from CPU side  从CPU端接受事件的队列
-    bool is_unified_queue_;
-    // std::vector<Transaction> 表示动态数组的容器模板
-    std::vector<Transaction> unified_queue_;
-    std::vector<Transaction> read_queue_;
-    std::vector<Transaction> write_buffer_;
+    // queue that takes transactions from CPU side  用于区分读写事件是否统一放在unified_queue_队列中
+    // true->读写统一队列   false->读写队列分离
+    bool is_unified_queue_;     
+    
+    /* std::vector<Transaction> 表示动态数组的容器模板 */ 
+
+    std::vector<Transaction> unified_queue_;    // 读写事件统一队列     尺寸由config_.trans_queue_size限制
+    std::vector<Transaction> read_queue_;       // 读事件队列     尺寸由config_.trans_queue_size限制
+    std::vector<Transaction> write_buffer_;     // 写事件队列     尺寸由config_.trans_queue_size限制
 
     /* std::multimap 是一个关联容器, 用于存储类型为Transaction的对象, 关联的键类型为uint64_t
         std::multimap容器使用键-值存储数据, 允许多个相同键的值存在, 即一个键可以对应多个值. 
@@ -80,7 +83,7 @@ class Controller {
     // used to calculate inter-arrival latency  用于计算内部到达延迟
     uint64_t last_trans_clk_;
 
-    // transaction queueing     时间队列
+    // transaction queueing     事件队列
     int write_draining_;
     void ScheduleTransaction();
     void IssueCommand(const Command &tmp_cmd);
